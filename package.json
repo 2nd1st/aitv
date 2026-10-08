@@ -1,0 +1,11 @@
+{
+  "name": "aitv",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "seed": "node scripts/seed-local.mjs",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {}
+}

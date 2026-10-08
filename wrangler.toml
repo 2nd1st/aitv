@@ -1,0 +1,18 @@
+name = "aitv"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+# 上线时启用：KV 存节目单，R2 存语音，每 15 分钟跑一次流水线
+# [[kv_namespaces]]
+# binding = "SCHEDULE"
+# id = "<待创建>"
+# [[r2_buckets]]
+# binding = "AUDIO"
+# bucket_name = "aitv-audio"
+# [triggers]
+# crons = ["*/15 * * * *"]
