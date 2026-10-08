@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 今天 · 画面预览</title>
+<link rel="stylesheet" href="./tv.css">
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import { createTV } from "./tv.js";
+
+// 示例数据，仅用于看画面。真实节目单由 /api/schedule 提供。
+const items = [
+  { id: "demo-1", template: "title", duration: 12, source: "Hacker News", url: "https://news.ycombinator.com/",
+    fields: { title: "示例：一个开源模型把 1M 上下文的推理成本打到了原来的十分之一", rank: 1, points: 812, comments: 233 },
+    rounds: [
+      { text: "第一句", start_time: 0, end_time: 4, keyword: "开源" },
+      { text: "第二句", start_time: 4, end_time: 8, keyword: "1M 上下文" },
+      { text: "第三句", start_time: 8, end_time: 12, keyword: "推理成本" } ] },
+  { id: "demo-2", template: "number", focus: "stars_today", duration: 10, source: "GitHub Trending",
+    url: "https://github.com/trending",
+    fields: { title: "示例仓库 example/agent-kit", stars_today: 2417, stars: 18930 }, rounds: [] },
+  { id: "demo-3", template: "source", duration: 8, source: "Product Hunt", url: "https://www.producthunt.com/",
+    fields: { title: "示例产品" }, rounds: [] },
+];
+const total = items.reduce((s, i) => s + i.duration, 0);
+const anchor = 0;
+
+const q = new URLSearchParams(location.search);
+const freezeT = q.has("t") ? parseFloat(q.get("t")) : null;
+const freezeI = q.has("i") ? parseInt(q.get("i"), 10) : null;
+
+const tv = createTV(document.getElementById("root"));
+
+function locate(now) {
+  let pos = (((now - anchor) / 1000) % total + total) % total;
+  for (const it of items) { if (pos < it.duration) return { item: it, t: pos }; pos -= it.duration; }
+  return { item: items[0], t: 0 };
+}
+function frame() {
+  const now = Date.now();
+  if (freezeI != null) tv.render(items[freezeI], freezeT ?? 0, now);
+  else { const { item, t } = locate(now); tv.render(item, t, now); }
+  requestAnimationFrame(frame);
+}
+if (q.get("on") === "1") tv.powerOn({ instant: true }).then(frame);
+else document.querySelector(".tv-power").addEventListener("click", () => requestAnimationFrame(frame), { once: true });
+</script>
+</body>
+</html>
