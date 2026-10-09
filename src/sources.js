@@ -84,7 +84,7 @@ export function parseGitHubTrending(html, fetchedAt) {
 // Product Hunt 公开 Atom feed 不带票数；有 PH_TOKEN 时可以改走 GraphQL 补 votesCount。
 export function parseProductHunt(xml, fetchedAt) {
   const entries = xml.split("<entry>").slice(1).map((e) => e.split("</entry>")[0]);
-  return entries.slice(0, 15).map((e, i) => {
+  return entries.slice(0, 15).map((e) => {
     const pick = (re) => (e.match(re) || [])[1];
     const postId = pick(/<id>[^<]*Post\/(\d+)<\/id>/);
     const content = pick(/<content[^>]*>([\s\S]*?)<\/content>/);
@@ -96,7 +96,8 @@ export function parseProductHunt(xml, fetchedAt) {
       url: pick(/<link rel="alternate" type="text\/html" href="([^"]+)"/),
       fetchedAt,
       publishedAt: pub ? Date.parse(pub) : null,
-      fields: { title: decode(pick(/<title>([\s\S]*?)<\/title>/) || ""), tagline, rank: i + 1 },
+      // 公开 feed 的顺序不是当日排名，不给 rank，免得念成「拿了第几名」
+      fields: { title: decode(pick(/<title>([\s\S]*?)<\/title>/) || ""), tagline },
     });
   });
 }
