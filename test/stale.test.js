@@ -12,7 +12,7 @@ function memKV(init = {}) {
   return { m, get: async (k) => (m.has(k) ? structuredClone(m.get(k)) : null), put: async (k, v) => { m.set(k, structuredClone(v)); }, delete: async (k) => { m.delete(k); } };
 }
 const memR2 = () => ({ head: async () => null, get: async () => null, put: async () => {} });
-const onAir = Array.from({ length: 15 }, (_, i) => ({ id: `x${i}`, audio: `/audio/${String(i).padStart(16, "a")}.mp3`, duration: 30, take: `${"甲乙丙丁戊己庚辛壬癸子丑寅卯辰"[i]}号点评内容` }));
+const onAir = Array.from({ length: 15 }, (_, i) => ({ id: `x${i}`, audio: `/audio/${String(i).padStart(16, "a")}.mp3`, duration: 30, publishedAt: T0 - 3600_000, take: `${"甲乙丙丁戊己庚辛壬癸子丑寅卯辰"[i]}号点评内容` }));
 const TL = { current: { version: "v1", ...buildSchedule(onAir, T0 - 3600_000) }, next: null, switchAt: null };
 const hit = (id, hoursAgo) => ({ objectID: String(id), title: `Story ${id}`, url: `https://example.com/${id}`, points: 100, num_comments: 10, created_at_i: Math.floor((T0 - hoursAgo * 3600_000) / 1000) });
 

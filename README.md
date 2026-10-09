@@ -78,7 +78,8 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 - 自动上线已开（`AUTO_PUBLISH = "1"`，2026-10-09 乔木批准）：每轮最多上一条新的，一天最多 40 条（`PIPELINE_MAX_NEW_PER_DAY`），插在当前在播那条后面（时间线 switchAt）。
 - 点评开头跟前后两条撞了：改写点评第一句（一条一天一次），重新校验、重新合成（占额度），再上；改了还撞就这一轮先不上新的。
 - 超龄：超过 6 小时的下线；不足 15 条时用 6–12 小时的旧条目补到 15（越新越先）；超过 12 小时的一律下线，哪怕不足 15 条。15 条门槛和补位永远不挡新条目。全部超过 12 小时时保留最新的那一批（`keptStale`），不出空节目单。
-- 新鲜度（2026-10-09，Whistle 事故后）：按来源的真实发布时间 `publishedAt` 判，不按抓取时间。候选超过 6 小时 → 记 `skipped:stale`，不读原文、不做摘要、不合成；AIHOT 读到原文日期后马上判；在途条目每一步之前再判；上线那一刻再判一次。HN = 帖子发到 HN 的时间；PH 日榜 = featuredAt；GitHub Trending 没有发布时间（null），这条规则管不到。节目单的 6 / 12 小时下线规则目前仍按 fetchedAt。
+- 新鲜度（2026-10-09，Whistle 事故后）：按来源的真实发布时间 `publishedAt` 判，不按抓取时间。候选超过 6 小时 → 记 `skipped:stale`，不读原文、不做摘要、不合成；AIHOT 读到原文日期后马上判；在途条目每一步之前再判；上线那一刻再判一次。HN = 帖子发到 HN 的时间；PH 日榜 = featuredAt；榜单类（`RANKED_SOURCES`，默认 `producthunt,github`）按上榜时间 `rankedAt`（`dateKind: "ranked"`）：PH = 那份日榜结束的时间（洛杉矶午夜），GitHub = 第一次在 trending 上看到（KV `rank:firstSeen`）。没有任何真实时间 = unknown → 候选记 `skipped:no-pubdate`，在播的下线；不拿抓取时间顶替。
+- 下线（同一套时间，`src/freshness.js`）：超过 6 小时下线；不足 15 条用 6–12 小时的补；超过 12 小时一律下线。12 小时内一条都不剩（且这一轮没有新条目）→ 保留时间最新的 5 条、标 `stale: true`，屏幕右上角小字「N 小时前」。全部经 switchAt。`/api/schedule` 每条带 `publishedAt`、`dateKind`（榜单类带 `rankedAt`）。
 - 发布时间（`src/pubdate.js`）：① 原文页面 → ② 官方 RSS（按域名查表，现在有 openai.com/news/rss.xml；按链接匹配，去 query / 结尾斜杠）→ ③ 包打听给的厂商官方 X 帖子时间（输入带 `pubDate` + `pubDateSource: "x"`）→ ④ 都没有就不播。永远不用抓取时间。条目上记 `pubDateSource`（page / rss / x）。
 - `use` / `rollback` 之后：下一轮把 6 小时内、没下架的已上线条目（`pipe:index.published`）全部插回，音频按 hash 已在 R2，不再合成。
 - 看状态：`node scripts/release.mjs pipeline [id]`。密钥用 `wrangler secret`：`DEEPSEEK_API_KEY`、`DOUBAO_TTS_ACCESS_TOKEN`。

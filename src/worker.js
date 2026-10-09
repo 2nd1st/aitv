@@ -1,3 +1,4 @@
+import { parseRanked, annotate } from "./freshness.js";
 import { serveAudio } from "./audio.js";
 import { serveImage } from "./images.js";
 import { buildSchedule } from "./schedule.js";
@@ -45,7 +46,9 @@ export async function scheduleBody(env, nowMs) {
     if (!seed) throw new Error(`KV 里没有 seed:${ptr.version}`);
     view = { current: { version: ptr.version, ...buildSchedule(seed.items, seed.anchorMs ?? seed.anchor ?? 0) }, next: null, switchAt: null };
   }
-  const current = filt(view.current), next = filt(view.next);
+  const ranked = parseRanked(env.RANKED_SOURCES);
+  const ann = (s) => s && { ...s, items: s.items.map((it) => annotate(it, ranked)) }; // 每条带 publishedAt / dateKind（榜单类带 rankedAt）
+  const current = ann(filt(view.current)), next = ann(filt(view.next));
   return {
     version: current.version ?? ptr?.version ?? null, commit: COMMIT, releaseCommit: ptr?.commit || null,
     current, next, switchAt: next ? view.switchAt : null,
@@ -96,6 +99,7 @@ export function makeDeps(env, now = Date.now()) {
   return {
     now, kv, r2: env.AUDIO, fetch: (...a) => fetch(...a),
     ttsCap: Number(env.TTS_DAILY_CAP ?? 40),
+    ranked: parseRanked(env.RANKED_SOURCES),
     briefLLM: makeDeepSeek({ apiKey: key, model: env.BRIEF_MODEL || "deepseek-chat" }),
     scriptLLM: makeDeepSeek({ apiKey: key, model: env.SCRIPT_MODEL || "deepseek-v4-pro", timeoutMs: 300_000 }),
     tts: (payload) => synthesize(env.DOUBAO_TTS_ACCESS_TOKEN, payload),

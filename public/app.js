@@ -182,9 +182,20 @@ function upcoming(ms, k = 5) {
   return walk(ms, k + 1).slice(1).map((it) => ({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source }));
 }
 
+// 旧条目（节目单里 stale: true，12 小时内一条都没有时留下的）右上角小字「N 小时前」；画面本身归 screen/ 管，这里只叠一层
+const ageTag = Object.assign(document.createElement("div"), { id: "age-tag" });
+ageTag.style.cssText = "position:fixed;top:10px;right:12px;z-index:50;font:12px/1.4 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:10px;pointer-events:none;display:none";
+document.body.appendChild(ageTag);
+function showAge(item) {
+  const at = item?.stale ? (item.dateKind === "ranked" ? item.rankedAt : item.publishedAt) : null;
+  const txt = at ? `${Math.max(1, Math.floor((now() - at) / 3600e3))} 小时前` : "";
+  if (ageTag.textContent !== txt) { ageTag.textContent = txt; ageTag.style.display = txt ? "" : "none"; }
+}
+
 function frame() {
   const n = vnow();
   const { item, t } = here(n);
+  showAge(item);
   if (on && !paused) syncAudio(item, t);
   // 暂停时画面定格；时钟仍走服务器时间
   tv.render(item, t, now(), { mode: "live", upcoming: upcoming(n) });
