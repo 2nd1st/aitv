@@ -75,8 +75,10 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 - 每 15 分钟一轮（`wrangler.toml` 的 `[triggers]`）。每条一个状态机：抓榜去重 → 读原文 → brief（deepseek-chat）→ 稿子（deepseek-v4-pro）→ 校验（数字 / 语气 / kind 规则、内容安全、下架名单按稿子 hash）→ 豆包合成 → R2（`<hash>.mp3` + `<hash>.json`）→ 单条 `checkSeed`。
 - 每一步结果存 KV `pipe:item:<id>`，挂了下一轮从断点接着跑；临时错误同一步最多 3 次，内容不合格直接丢。
 - 合成额度：`ttscap:<东八区日期>`，一天 40 次（`TTS_DAILY_CAP`），同一条一天最多 2 次（一次重试），R2 里已有同 hash 音频不调豆包、不占额度；累计合成失败 4 次丢掉。
-- 验证期：`PIPELINE_MAX_NEW_PER_DAY = 1`（每天最多开一条新的），`AUTO_PUBLISH = "0"`（做好的条目不上线，只在 `pipe:index.last.plan` 记「如果上线会在哪个 switchAt 插入」）。
-- 打开自动上线后：最多插一条，插在当前在播那条后面（时间线 switchAt），超过 6 小时的条目下线但不让节目单少于 15 条；点评开头跟前后两条撞了不插。
+- 自动上线已开（`AUTO_PUBLISH = "1"`，2026-10-09 乔木批准）：每轮最多上一条新的，一天最多 40 条（`PIPELINE_MAX_NEW_PER_DAY`），插在当前在播那条后面（时间线 switchAt）。
+- 点评开头跟前后两条撞了：改写点评第一句（一条一天一次），重新校验、重新合成（占额度），再上；改了还撞就这一轮先不上新的。
+- 超龄：超过 6 小时的下线；不足 15 条时用 6–12 小时的旧条目补到 15（越新越先）；超过 12 小时的一律下线，哪怕不足 15 条。15 条门槛和补位永远不挡新条目。全部超过 12 小时时保留最新的那一批（`keptStale`），不出空节目单。
+- `use` / `rollback` 之后：下一轮把 6 小时内、没下架的已上线条目（`pipe:index.published`）全部插回，音频按 hash 已在 R2，不再合成。
 - 看状态：`node scripts/release.mjs pipeline [id]`。密钥用 `wrangler secret`：`DEEPSEEK_API_KEY`、`DOUBAO_TTS_ACCESS_TOKEN`。
 
 ## item 契约（screen 只认这些）

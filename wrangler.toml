@@ -22,6 +22,6 @@ bucket_name = "aitv-audio"
 crons = ["*/15 * * * *"]
 
 [vars]
-AUTO_PUBLISH = "0"              # "1" 才把做好的条目插进时间线；现在只记计划
-PIPELINE_MAX_NEW_PER_DAY = "1"  # 验证期：每天最多开一条新的
+AUTO_PUBLISH = "1"               # 乔木 2026-10-09 13:34 批准「开自动上台」：做好的条目经 switchAt 插进时间线
+PIPELINE_MAX_NEW_PER_DAY = "40"  # 每轮最多一条新的，一天最多 40 条
 TTS_DAILY_CAP = "40"

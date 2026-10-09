@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { runCron, advance, dropOld, planInsert, tagParts } from "../src/pipeline.js";
+import { runCron, advance, dropOld, planInsert, planPublish, tagParts, firstSentence } from "../src/pipeline.js";
+import { planTimeline } from "../src/timeline.js";
 import { mp3Duration } from "../src/mp3.js";
 import { scriptHash } from "../src/scripthash.js";
 import { addTakedown } from "../src/release.js";
@@ -41,7 +42,7 @@ function memR2(init = {}) {
 const onAir = Array.from({ length: 15 }, (_, i) => ({ id: `x${i}`, audio: `/audio/${String(i).padStart(16, "a")}.mp3`, duration: 30, take: `${"甲乙丙丁戊己庚辛壬癸子丑寅卯辰"[i]}号点评内容` }));
 const TL = { current: { version: "v1", ...buildSchedule(onAir, T0 - 3600_000) }, next: null, switchAt: null };
 
-function deps({ now = T0, kv = memKV({ timeline: TL, "pipe:index": { seen: ["gh-boykopovar/AnyPS5"] } }), r2 = memR2(), script = SCRIPT, briefFail = 0, ttsFail = 0, ttsCap = 40 } = {}) {
+function deps({ now = T0, kv = memKV({ timeline: TL, "pipe:index": { seen: ["gh-boykopovar/AnyPS5"] } }), r2 = memR2(), script = SCRIPT, briefFail = 0, ttsFail = 0, ttsCap = 40, rewrite = "不妨先拿它重绘现有文档里的架构图，对比输出是否比通用圆角框更贴切；" } = {}) {
   const calls = { readme: 0, brief: 0, script: 0, tts: 0 };
   let bf = briefFail, tf = ttsFail;
   return { calls, kv, r2, d: {
@@ -53,7 +54,7 @@ function deps({ now = T0, kv = memKV({ timeline: TL, "pipe:index": { seen: ["gh-
       return new Response("nope", { status: 404 });
     },
     briefLLM: async (p) => { calls.brief++; if (bf-- > 0) throw new Error("DeepSeek 503"); return /title_zh/.test(p) ? "{}" : JSON.stringify(BRIEF); },
-    scriptLLM: async () => { calls.script++; return JSON.stringify(script); },
+    scriptLLM: async (p) => { if (/"first"/.test(p)) { calls.rewrite = (calls.rewrite || 0) + 1; return JSON.stringify({ first: rewrite }); } calls.script++; return JSON.stringify(script); },
     tts: async (payload) => { calls.tts++; if (tf-- > 0) throw new Error("豆包 500");
       return { audio: fakeMp3(), rounds: payload.nlp_texts.map((x, i) => ({ text: x.text, start_time: i * 8, end_time: i * 8 + 8 })) }; },
   } };
@@ -157,12 +158,89 @@ test("自动上线打开：插在当前在播那条后面，switchAt 在边界�
   assert.equal(effective(tl, tl.switchAt).current.items[0].id, ID);
 });
 
-test("超过 6 小时的下线，但不让节目单少于 15 条；插入后少于 15 条就不插", () => {
-  const now = T0;
-  const xs = Array.from({ length: 17 }, (_, i) => ({ id: `o${i}`, audio: `/audio/${String(i).padStart(16, "b")}.mp3`, duration: 20, fetchedAt: now - (i < 5 ? 7 : 1) * 3600_000 }));
-  assert.equal(dropOld(xs, now).length, 15);   // 5 条超龄，只能下 2 条
-  assert.equal(dropOld(xs, now, { min: 10 }).length, 12);
-  const small = { current: { version: "v", ...buildSchedule(onAir.slice(0, 12), T0) }, next: null, switchAt: null };
-  const p = planInsert(small, now, { id: "n" }, {});
-  assert.equal(p.ok, false);
+const ago = (h) => T0 - h * 3600_000;
+const aged = (n, h, p = "o") => Array.from({ length: n }, (_, i) => ({ id: `${p}${h}-${i}`, audio: `/audio/${(p + h + "x" + i).padEnd(16, "0").slice(0, 16)}.mp3`, duration: 20, fetchedAt: ago(h) }));
+
+test("超龄：6 小时内全留；不足 15 条用 6–12 小时的补（越新越先）；超过 12 小时一律下线", () => {
+  assert.equal(dropOld([...aged(16, 1), ...aged(5, 7)], T0).length, 16);                 // 6 小时内够 15，超龄的全下
+  const f = dropOld([...aged(10, 1), ...aged(3, 7), ...aged(4, 9)], T0);                  // 10 + 补 5（先 7 小时的 3 条，再 9 小时的 2 条）
+  assert.equal(f.length, 15);
+  assert.equal(f.filter((x) => x.id.startsWith("o7")).length, 3);
+  assert.equal(f.filter((x) => x.id.startsWith("o9")).length, 2);
+  assert.equal(dropOld([...aged(3, 1), ...aged(20, 13)], T0).length, 3);                // 超过 12 小时的不当补位，哪怕只剩 3 条
 });
+
+test("边界：全部超过 12 小时 → 不出空节目单，保留最新的那一批（keptStale）", () => {
+  const out = dropOld([...aged(4, 13), ...aged(2, 20)], T0);
+  assert.equal(out.length, 4); assert.equal(out.keptStale, true);
+});
+
+test("15 条门槛不挡新条目：只有 5 条在播也照样插", () => {
+  const small = { current: { version: "v", ...buildSchedule(onAir.slice(0, 5), T0) }, next: null, switchAt: null };
+  const it = { ...onAir[0], id: "new", audio: "/audio/ffffffffffffffff.mp3", take: "全新的点评开头" };
+  const p = planPublish(small, T0, { newItem: it });
+  assert.ok(p.ok, p.reason); assert.equal(p.count, 6); assert.deepEqual(p.inserted, ["new"]);
+});
+
+// T0 时正在播第 0 条（写稿时的上一条点评，开头不同）；切换点前后的邻居点评都以「拿它重」开头
+const clashTL = { current: { version: "v1", ...buildSchedule(onAir.map((x, i) => ({ ...x, take: i === 0 ? "甲号点评内容" : "拿它重新看一遍" })), T0 - 3600_000) }, next: null, switchAt: null };
+test("点评开头跟邻居撞：改写第一句 → 重新校验 → 重新合成（占额度）→ 当轮上线", async () => {
+  const x = deps({ kv: memKV({ timeline: clashTL, "pipe:index": { seen: ["gh-boykopovar/AnyPS5"] } }) });
+  const out = await runCron(x.d, { autoPublish: true });
+  const tl = await x.kv.get("timeline");
+  assert.equal(x.calls.rewrite, 1, JSON.stringify(out.log));
+  assert.equal(x.calls.tts, 2);                              // 原稿一次 + 改写后一次
+  assert.equal((await x.kv.get(capKey(T0))).count, 2);
+  assert.equal(tl.next.items[0].id, ID, JSON.stringify(out.log));
+  assert.match(tl.next.items[0].take, /^不妨先/);
+});
+
+test("改写一条一天只试一次：改了还撞就先不上，同一天不再改；插回 / 下线照做", async () => {
+  const x = deps({ kv: memKV({ timeline: clashTL, "pipe:index": { seen: ["gh-boykopovar/AnyPS5"] } }), rewrite: "拿它重新画一遍现有文档里的架构图；" });
+  await runCron(x.d, { autoPublish: true });
+  assert.equal(x.calls.rewrite, 1);
+  assert.deepEqual(await x.kv.get("timeline"), clashTL);
+  assert.equal((await x.kv.get("pipe:index")).ready[0], ID);
+  await runCron({ ...x.d, now: T0 + 15 * 60_000 }, { autoPublish: true });
+  assert.equal(x.calls.rewrite, 1);                          // 同一天不再改
+  await runCron({ ...x.d, now: T0 + 24 * 3600_000 }, { autoPublish: true, maxNewPerDay: 0 });
+  assert.equal(x.calls.rewrite, 2);                          // 第二天可以再改一次
+});
+
+test("use / rollback 之后：下一轮把 6 小时内、没下架的已上线条目插回来，零合成", async () => {
+  const x = deps();
+  await runCron(x.d, { autoPublish: true });
+  assert.equal((await x.kv.get("pipe:item:" + ID)).status, "published");
+  const tts0 = x.calls.tts, cap0 = (await x.kv.get(capKey(T0))).count;
+  // 模拟 release.mjs use：换成一个不含新条目的版本（fresh），switchAt 过后生效
+  const t1 = T0 + 20 * 60_000;
+  const used = planTimeline(await x.kv.get("timeline"), t1, { version: "v2", items: onAir, mode: "fresh" }).timeline;
+  await x.kv.put("timeline", used);
+  const t2 = used.switchAt + 60_000;
+  const out = await runCron({ ...x.d, now: t2 }, { autoPublish: true, maxNewPerDay: 1 });
+  const tl = await x.kv.get("timeline");
+  assert.deepEqual(out.plan.reinserted, [ID], JSON.stringify(out.log));
+  assert.ok(tl.next.items.some((i) => i.id === ID));
+  assert.ok(tl.switchAt >= t2 + 150_000);
+  assert.equal(x.calls.tts, tts0);                            // 没有新合成
+  assert.equal((await x.kv.get(capKey(T0))).count, cap0);
+  // 已经在时间线里了：再跑一轮不重复插
+  const again = await runCron({ ...x.d, now: tl.switchAt + 60_000 }, { autoPublish: true });
+  assert.ok(!(again.plan?.reinserted || []).length);
+});
+
+test("插回只插 6 小时内、没下架的", async () => {
+  const x = deps();
+  await runCron(x.d, { autoPublish: true });
+  const st = await x.kv.get("pipe:item:" + ID);
+  const used = { current: { version: "v2", ...buildSchedule(onAir, T0) }, next: null, switchAt: null };
+  await x.kv.put("timeline", used);
+  const late = await runCron({ ...x.d, now: st.seedItem.fetchedAt + 6 * 3600_000 + 60_000 }, { autoPublish: true, maxNewPerDay: 0 });
+  assert.ok(!(late.plan?.reinserted || []).includes(ID));
+  await x.kv.put("timeline", used);
+  await x.kv.put("takedown", addTakedown(null, { audio: st.seedItem.audio }));
+  const td = await runCron({ ...x.d, now: T0 + 3600_000 }, { autoPublish: true, maxNewPerDay: 0 });
+  assert.ok(!(td.plan?.reinserted || []).includes(ID));
+});
+
+test("firstSentence 只取第一句", () => assert.equal(firstSentence("甲乙；丙丁。"), "甲乙；"));

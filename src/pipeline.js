@@ -10,13 +10,14 @@
 import { fetchAll, dedupe, interleave } from "./sources.js";
 import { fetchMaterial, enrich } from "./enrich.js";
 import { writeScript, toSeedItem, needsTitleZh, translateTitle, PART_KEYS, checkScript, scriptFields, opening } from "./writer.js";
+import { renderScript } from "./validate.js";
 import { checkSafety } from "./safety.js";
 import { scriptHash, SPEAKERS, AUDIO_CONFIG } from "./scripthash.js";
 import { takedownMatches, checkSeed, MIN_PLAYABLE } from "./release.js";
 import { reserveTTS } from "./ttscap.js";
 import { storeScreenedImage } from "./imagepick.js";
 import { mp3Duration } from "./mp3.js";
-import { planTimeline, effective, fresh, locate } from "./timeline.js";
+import { planTimeline, effective, locate } from "./timeline.js";
 
 export const STEPS = ["read", "brief", "script", "validate", "tts"];
 export const MAX_STEP_TRIES = 3; // 网络 / 模型这类临时错误：同一步最多跑 3 次（跨轮）
@@ -155,32 +156,85 @@ export async function advance(st, d, { save, deadline = Infinity } = {}) {
 }
 
 // ---------- 上线（插进时间线），AUTO_PUBLISH 才真写 ----------
-// 新条目插在「当前在播的那条」后面（switchAt 机制）；超过 6 小时的条目下线，但不会让节目单少于 MIN_PLAYABLE 条。
-export function dropOld(items, now, { min = MIN_PLAYABLE, maxAge } = {}) {
-  const keep = new Set(fresh(items, now, maxAge).map((x) => `${x.id}|${x.audio}`));
-  const old = items.filter((x) => !keep.has(`${x.id}|${x.audio}`)).sort((a, b) => (a.fetchedAt ?? 0) - (b.fetchedAt ?? 0));
-  const allowed = Math.max(0, items.length - min);
-  const gone = new Set(old.slice(0, allowed).map((x) => `${x.id}|${x.audio}`));
-  return items.filter((x) => !gone.has(`${x.id}|${x.audio}`));
+// 规则（乔布斯 2026-10-09 签）：
+// - 每轮最多上一条新的；点评开头跟前后撞了就改写点评第一句（一条一天一次，改了要重新校验、重新合成、占额度）。
+// - 超过 6 小时的下线；不足 15 条时用 6–12 小时的旧条目补到 15（越新越先），超过 12 小时的一律下线，哪怕不足 15 条。
+//   15 条的门槛和兜底永远不挡新条目上线。全都不合格时保留最新的那一批在播条目，不出空节目单。
+// - use / rollback 之后（时间线里少了我们上过的条目），下一轮把 6 小时内、没下架的已完成条目全部插回来，
+//   音频按 hash 已在 R2，不再合成。全部经 switchAt。
+export const FRESH_MS = 6 * 3600_000, FILLER_MAX_MS = 12 * 3600_000;
+const ageOf = (it, now) => { const t = it.fetchedAt ?? it.publishedAt; return t == null ? 0 : now - t; };
+const keyOf = (x) => `${x.id}|${x.audio}`;
+export function dropOld(items, now, { min = MIN_PLAYABLE } = {}) {
+  const fresh6 = items.filter((x) => ageOf(x, now) <= FRESH_MS);
+  let keep = new Set(fresh6.map(keyOf));
+  if (keep.size < min) {
+    const filler = items.filter((x) => { const a = ageOf(x, now); return a > FRESH_MS && a <= FILLER_MAX_MS; }).sort((x, y) => ageOf(x, now) - ageOf(y, now));
+    for (const f of filler) { if (keep.size >= min) break; keep.add(keyOf(f)); }
+  }
+  let out = items.filter((x) => keep.has(keyOf(x)));
+  let keptStale = false;
+  if (!out.length && items.length) { // 边界：全都超过 12 小时 → 留最新的那一批，不出空节目单
+    const newest = Math.min(...items.map((x) => ageOf(x, now)));
+    out = items.filter((x) => ageOf(x, now) === newest);
+    keptStale = true;
+  }
+  return Object.assign(out, { keptStale });
 }
-export function planInsert(tl, now, item, { min = MIN_PLAYABLE, takedown } = {}) {
+
+// 点评第一句改写：只改 part3 模板的第一句，开头避开给定的几个开头
+export const firstSentence = (s) => { const m = String(s).match(/^[^。！？；]*[。！？；]?/); return m ? m[0] : String(s); };
+export async function rewriteTakeOpening(st, d, avoid) {
+  const s = st.results.script, b = st.results.brief;
+  const tpl = s.parts[2], first = firstSentence(tpl), rest = tpl.slice(first.length);
+  const prompt = `下面是一段中文口播点评的第一句（模板，{{…}} 是占位符，原样保留）。把它改写成意思不变、同样口吻的一句，只改说法和开头。
+要求：开头的头几个字不能是这些：${avoid.map((x) => `「${x}」`).join("、")}；不要以「如果你」开头；不要出现「今天」；不要新增任何数字（阿拉伯数字或中文数字都不行）；不要加新的事实。
+原句：${first}
+后文（不用改，只供参考）：${rest}
+只输出 JSON：{"first":"…"}`;
+  let out;
+  try { out = JSON.parse((await d.scriptLLM(prompt, { temperature: 0.8 })).match(/\{[\s\S]*\}/)?.[0] || "null"); } catch { out = null; }
+  const nf = typeof out?.first === "string" ? out.first.trim() : "";
+  if (!nf) return { ok: false, reason: "改写没给结果" };
+  const parts = [s.parts[0], s.parts[1], nf + rest];
+  const it = { ...st.item, ...b, fields: s.fields };
+  const fields = scriptFields(it);
+  const chk = checkScript(parts, fields, { kind: b.kind, source: it.source });
+  if (!chk.ok) return { ok: false, reason: `改写后不过：${chk.errors.join("；")}` };
+  const lines = parts.map((p) => renderScript(p, s.fields));
+  if (avoid.includes(opening(lines[2]))) return { ok: false, reason: "改写后开头还是撞" };
+  return { ok: true, script: { ...s, parts, lines } };
+}
+
+// 这一轮的上线计划。返回 { ok, timeline, inserted: [id], reinserted: [id], dropped, keptStale } 或 { ok: false, reason }
+export function planPublish(tl, now, { newItem = null, reinsert = [], takedown } = {}) {
   const eff = effective(tl, now);
   if (!eff) return { ok: false, reason: "KV 里没有时间线" };
+  const target = eff.next || eff.current;
+  const insert = [newItem, ...reinsert].filter(Boolean).filter((x) => !takedownMatches(takedown, x));
+  const insIds = new Set(insert.map((x) => x.id));
+  const base = target.items.filter((x) => !insIds.has(x.id));
+  const kept = dropOld(base, now);
+  if (!insert.length && kept.length === base.length) return { ok: false, reason: "没有要变的", noop: true };
+  // 门槛不挡新条目：新条目 + 留下的，多少条都照排（插进来的不受 6 / 12 小时规则，它们本来就是新的）
+  const p = planTimeline(tl, now, { version: target.version, items: kept, insert });
+  if (!p.ok) return p;
+  const n = p.timeline.next || p.timeline.current, at = p.timeline.switchAt ?? now;
+  const before = eff.current.items[locate(eff.current, at - 1).i];
+  let clash = null;
+  if (newItem && insert[0] === newItem) {
+    const after = n.items[1];
+    for (const nb of [before, after]) if (nb?.take && nb.id !== newItem.id && opening(nb.take) === opening(newItem.take)) clash = { with: nb.id, avoid: [before?.take, after?.take].filter(Boolean).map(opening) };
+  }
+  return { ...p, clash, inserted: newItem ? [newItem.id] : [], reinserted: reinsert.map((x) => x.id), dropped: base.length - kept.length, keptStale: kept.keptStale, count: n.items.length };
+}
+// 兼容旧名字（测试 / 脚本用）
+export const planInsert = (tl, now, item, o = {}) => {
   const v = validateItem(item);
   if (!v.ok) return { ok: false, reason: `条目没通过校验：${v.errors.join("；")}` };
-  if (takedownMatches(takedown, item)) return { ok: false, reason: "稿子在下架名单里" };
-  const target = eff.next || eff.current;
-  const items = dropOld(target.items.filter((x) => x.id !== item.id), now, { min });
-  if (items.length + 1 < min) return { ok: false, reason: `插入后只有 ${items.length + 1} 条，少于 ${min}` };
-  const p = planTimeline(tl, now, { version: target.version, items, insert: [item] });
-  if (!p.ok) return p;
-  // 点评开头不能跟前后两条撞
-  const n = p.timeline.next || p.timeline.current, at = p.timeline.switchAt ?? now;
-  const before = eff.current.items[(locate(eff.current, at - 1).i)];
-  const after = n.items[1];
-  for (const nb of [before, after]) if (nb?.take && opening(nb.take) === opening(item.take)) return { ok: false, reason: `点评开头跟相邻的 ${nb.id} 撞了` };
-  return { ...p, dropped: target.items.length - items.length - (target.items.some((x) => x.id === item.id) ? 1 : 0) };
-}
+  const p = planPublish(tl, now, { newItem: item, takedown: o.takedown });
+  return p.ok && p.clash ? { ok: false, reason: `点评开头跟相邻的 ${p.clash.with} 撞了` } : p;
+};
 
 // ---------- 一轮 cron ----------
 // d：依赖（Worker 里由 makeDeps(env) 组装；测试里全是假的）
@@ -224,21 +278,55 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
       if (st.status === "ready") { idx.pending = idx.pending.filter((x) => x !== id); idx.ready.push(id); }
       if (st.status === "dropped") { idx.pending = idx.pending.filter((x) => x !== id); idx.dropped = [...idx.dropped, { id, step: st.step, why: st.why, at: now }].slice(-200); }
     }
-    // 3. 上线：最多插一条
+    // 3. 上线：最多一条新的 + 插回被 use / rollback 拿掉的已上线条目 + 下线超龄的
     let plan = null;
-    const readyId = idx.ready[0];
-    if (readyId) {
-      const st = await kv.get(`pipe:item:${readyId}`);
-      let p = planInsert(tl, now, st.seedItem, { takedown: d.takedown });
-      if (p.ok && !(await d.r2.head(st.seedItem.audio.replace(/^\/audio\//, "")))) p = { ok: false, reason: "R2 里没有这条的音频" };
-      plan = p.ok ? { id: readyId, switchAt: p.timeline.switchAt, count: (p.timeline.next || p.timeline.current).items.length, droppedOld: p.dropped } : { id: readyId, refused: p.reason };
-      if (p.ok && autoPublish) {
-        await kv.put("timeline", { ...p.timeline, updatedAt: new Date(now).toISOString(), why: `cron insert ${readyId}` });
-        idx.ready = idx.ready.slice(1);
-        st.status = "published"; st.publishedAt = now; await kv.put(`pipe:item:${readyId}`, st);
-        log.push(`已插入时间线，${new Date(p.timeline.switchAt).toISOString()} 生效`);
-      } else log.push(autoPublish ? `不插：${p.reason}` : `自动上线关闭；如果打开：${p.ok ? `会在 switchAt ${new Date(p.timeline.switchAt).toISOString()} 插入，节目单 ${plan.count} 条` : `不会插：${p.reason}`}`);
+    const onAirTl = await kv.get("timeline");
+    const effNow = effective(onAirTl, now);
+    const onAirKeys = new Set([...(effNow?.next || effNow?.current)?.items || []].map(keyOf));
+    // 已上线过、6 小时内、没下架、R2 里有音频、现在不在时间线里的 → 插回（不合成）
+    idx.published = (idx.published || []).filter((p) => now - p.at <= FILLER_MAX_MS);
+    const reinsert = [];
+    for (const p of idx.published) {
+      const st = await kv.get(`pipe:item:${p.id}`);
+      const it = st?.seedItem;
+      if (!it || onAirKeys.has(keyOf(it)) || ageOf(it, now) > FRESH_MS || takedownMatches(d.takedown, it)) continue;
+      if (!(await d.r2.head(it.audio.replace(/^\/audio\//, "")))) continue;
+      reinsert.push(it);
     }
+    let readyId = idx.ready[0], readySt = readyId ? await kv.get(`pipe:item:${readyId}`) : null;
+    if (readySt && takedownMatches(d.takedown, readySt.seedItem)) { idx.ready = idx.ready.slice(1); readySt = null; readyId = null; }
+    let p = planPublish(onAirTl, now, { newItem: readySt?.seedItem || null, reinsert, takedown: d.takedown });
+    // 点评开头撞车：改写第一句（一条一天一次）→ 重新校验 → 重新合成 → 再排一次
+    if (p.ok && p.clash && autoPublish) {
+      if (readySt.takeRewriteDay !== day(now)) {
+        readySt.takeRewriteDay = day(now);
+        const r = await rewriteTakeOpening(readySt, d, p.clash.avoid);
+        log.push(`点评开头跟 ${p.clash.with} 撞了，改写第一句：${r.ok ? "成功" : r.reason}`);
+        if (r.ok) {
+          let st2 = { ...readySt, results: { ...readySt.results, script: r.script }, step: "validate", status: "pending", seedItem: undefined };
+          st2 = await advance(st2, d, { save: (s) => kv.put(`pipe:item:${readyId}`, s), deadline });
+          readySt = st2;
+          if (st2.status === "ready") p = planPublish(onAirTl, now, { newItem: st2.seedItem, reinsert, takedown: d.takedown });
+          else { log.push(`改写后：${st2.status}（${st2.why || ""}）`); if (st2.status === "dropped") idx.ready = idx.ready.slice(1); }
+        } else await kv.put(`pipe:item:${readyId}`, readySt);
+      }
+      if (p.ok && p.clash) { // 今天已经改过 / 改写失败：这一轮不上新的，插回和下线照做
+        log.push(`点评开头撞车，新条目这一轮先不上`);
+        p = planPublish(onAirTl, now, { newItem: null, reinsert, takedown: d.takedown });
+      }
+    }
+    if (p.ok) {
+      plan = { switchAt: p.timeline.switchAt, count: p.count, inserted: p.inserted, reinserted: p.reinserted, droppedOld: p.dropped, keptStale: p.keptStale };
+      if (autoPublish) {
+        await kv.put("timeline", { ...p.timeline, updatedAt: new Date(now).toISOString(), why: `cron +${p.inserted.join(",") || "-"} reinsert ${p.reinserted.length} drop ${p.dropped}` });
+        for (const id of p.inserted) {
+          idx.ready = idx.ready.filter((x) => x !== id);
+          idx.published.push({ id, at: now });
+          const st = await kv.get(`pipe:item:${id}`); st.status = "published"; st.publishedAt = now; await kv.put(`pipe:item:${id}`, st);
+        }
+        log.push(`时间线已更新：新上 ${p.inserted.join(",") || "无"}，插回 ${p.reinserted.length} 条，下线 ${p.dropped} 条，${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条${p.keptStale ? "（全部超过 12 小时，保留了最新一批）" : ""}`);
+      } else log.push(`自动上线关闭；如果打开：${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条（新上 ${p.inserted.length}、插回 ${p.reinserted.length}、下线 ${p.dropped}）`);
+    } else if (!p.noop) { plan = { refused: p.reason }; log.push(`时间线不动：${p.reason}`); }
     idx.last = { at: now, log, plan, autoPublish };
     await kv.put("pipe:index", idx);
     return idx.last;
