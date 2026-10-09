@@ -39,6 +39,8 @@ export function checkSeed(seed, version, { audioBytes, minPlayable = MIN_PLAYABL
     if (!PARTS.every((p) => parts.has(p))) e.push("rounds 没把 what/who/take 都标上");
     if ("materialText" in it || "material" in it || dump.includes("materialText")) e.push("带了原文");
     if (it.source === "Product Hunt" && "rank" in (it.fields || {})) e.push("Product Hunt 不许有 rank");
+    // 发布时间读不到的不播（AIHOT 从原文读；不拿抓取时间顶替）
+    if (it.dateUnknown === true || (it.source === "AIHOT" && it.publishedAt == null)) e.push("发布时间读不到，不播");
     if (it.image != null && !/^\/img\/[0-9a-f]{16}\.(jpg|png|webp)$/.test(String(it.image))) e.push("image 只能是自家 /img/<key>，不许是第三方地址");
     if (e.length) errors.push(`${it.id}：${e.join("，")}`);
     else playable++;

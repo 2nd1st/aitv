@@ -39,7 +39,8 @@ await Promise.all(Array.from({ length: 6 }, async () => {
     busy[it.source] = (busy[it.source] || 0) + 1;
     try {
       const e = await enrich(it, { llm: (p) => briefLLM(p, { temperature: 0.3 }), retries: 1 });
-      if (!e.brief) drop(it, "brief", e.briefError);
+      if (e.dateUnknown || (it.source === "AIHOT" && e.publishedAt == null)) drop(it, "date", "发布时间读不到，不播（不拿抓取时间顶替）");
+      else if (!e.brief) drop(it, "brief", e.briefError);
       else { (briefs[it.source] ||= []).push(e); log(`· brief  [${it.source}] ${e.kind} ${e.brief.name ? `«${e.brief.name}» ` : ""}${it.fields.title.slice(0, 40)}`); }
     } finally { busy[it.source]--; }
   }

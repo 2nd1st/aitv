@@ -213,7 +213,8 @@ export function parsePHLeaderboard(html, fetchedAt, { day = isoDay(phLeaderboard
         //   不是票数，不许念成「票」。
         phScore: check.ok && Number.isFinite(r.score) ? r.score : null,
         // comments：Post.commentsCount，这个产品发布帖下的评论总数（抓取时）。
-        comments: typeof n.commentsCount === "number" ? n.commentsCount : null,
+        //   这一批没通过合理性检查（名次不是 1..N 连续、名次靠后的分数反而更高……）时，PH 的数字整批都不给，评论数也不给。
+        comments: check.ok && typeof n.commentsCount === "number" ? n.commentsCount : null,
       },
     });
   });

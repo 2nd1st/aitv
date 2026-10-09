@@ -62,7 +62,8 @@ test("PH 日榜：有官方 TopPostBadge（日榜、同一天）时以它为准�
   assert.equal(bad.check.ok, false);
   assert.equal(bad.length, 10, "条目照留");
   assert.ok(bad.every((x) => !("phDailyRank" in x.fields) && !("phScore" in x.fields)), "整批拿掉名次和分数");
-  assert.ok(bad.every((x) => typeof x.fields.comments === "number"), "评论数照留");
+  assert.ok(bad.every((x) => !("comments" in x.fields)), "PH 的数字整批都不给（评论数也不给）");
+  assert.ok(bad.every((x) => x.fields.title && x.fields.tagline), "内容照留");
 });
 
 test("PH 日榜合理性检查：分数不随名次递减 / dailyRank 对不上 / 页面日期不对 → 整批不给名次和分数", () => {
@@ -122,4 +123,45 @@ test("PH 稿子：全文不许说「今天」；提示词告诉模型这是昨�
   assert.match(prompt, /昨天/);
   assert.match(prompt, /昨天 Product Hunt 日榜第 \{\{phDailyRank\}\} 名/);
   assert.match(prompt, /不是票数/);
+});
+
+// ---------- 合并前加的硬要求（迪恩 / 乔布斯）----------
+test("名次不是 1..N 连续（官方徽章跳号）→ 这一批 PH 的数字全拿掉，内容照播，稿子里不能再用 {{phDailyRank}} / {{phScore}}", () => {
+  const gap = parsePHLeaderboard(mutate((edges) => {
+    const posts = edges.filter((e) => e.node.__typename === "Post");
+    posts.forEach((e, i) => { e.node.badges = { edges: [{ node: { __typename: "TopPostBadge", position: i < 2 ? i + 1 : i + 2, period: "daily", date: "2026-10-07" } }] }; });
+  }), T);
+  assert.equal(gap.check.ok, false);
+  assert.match(gap.check.errors.join(), /不连续|不一致/);
+  for (const it of gap) {
+    assert.ok(!["phDailyRank", "phScore", "comments"].some((k) => k in it.fields), JSON.stringify(it.fields));
+    assert.ok(it.fields.title);
+    const f = scriptFields(it);
+    assert.equal(checkTemplate("昨天 Product Hunt 日榜第 {{phDailyRank}} 名", f).ok, false);
+    assert.equal(checkTemplate("综合分 {{phScore}} 分", f).ok, false);
+  }
+});
+
+test("名次靠后的分数反而更高 → 整批 PH 数字全拿掉（不止相邻两条）", () => {
+  const inv = parsePHLeaderboard(mutate((edges) => { edges.filter((e) => e.node.__typename === "Post")[6].node.launchDayScore = 10_000; }), T);
+  assert.equal(inv.check.ok, false);
+  assert.ok(inv.every((x) => !("phDailyRank" in x.fields) && !("phScore" in x.fields) && !("comments" in x.fields)));
+  assert.equal(inv.length, 10);
+});
+
+test("phScore 只能念「综合分 N 分」，PH 稿子全文不许出现「票」", () => {
+  const [it] = parsePHLeaderboard(HTML, T);
+  const f = { ...scriptFields(it), name: "IrisGo" };
+  assert.equal(buildSpoken("综合分 {{phScore}} 分", f), "综合分 497 分");
+  assert.equal(checkTemplate("拿了 {{phScore}} 分", f).ok, false);   // 没说「综合分」
+  assert.equal(checkTemplate("{{phScore}} 票", f).ok, false);
+  const parts = [
+    "{{name}} 是一个给独立创业者用的 AI 助手，把日常的营销、客服和数据整理串成一条线自动跑起来，省掉在各个工具之间来回切换的功夫，适合一个人撑一摊事的团队拿来减负。",
+    "一个人做产品、又要自己拉客户的创业者最用得上，它把重复的跟进和整理交给助手，在昨天的榜上综合分 {{phScore}} 分，大家投票很踊跃。",
+    "可以先拿一个小流程试一下，比如自动整理客户来信，看它理解得准不准，再决定要不要把更多事交给它，记得先确认它会碰到哪些账号。",
+  ];
+  const chk = checkScript(parts, f, { kind: "product", source: "Product Hunt" });
+  assert.match(chk.errors.join(), /不许出现「票」/);
+  const ok = checkScript(parts.map((p) => p.replace("，大家投票很踊跃", "")), f, { kind: "product", source: "Product Hunt" });
+  assert.ok(!/票/.test(ok.errors.join()), ok.errors.join());
 });

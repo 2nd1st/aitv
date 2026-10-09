@@ -31,6 +31,8 @@ const step = {
   async read(st, d) {
     const m = await fetchMaterial(st.item, { fetchImpl: d.fetch });
     if (!m) throw new Error("原文读不到");
+    // 发布时间读不到（AIHOT 原文没日期、或原文是旧链接退回了 links.aihot）：不播，不拿抓取时间顶替
+    if (m.patch?.dateUnknown || (st.item.dateUnknown && m.patch?.publishedAt == null)) throw new Drop("发布时间读不到，不播");
     return m; // { url, text, image }（原文只存在流水线自己的 KV 里，不进 seed / 节目单）
   },
   async brief(st, d) {

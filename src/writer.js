@@ -115,6 +115,8 @@ export function checkScript(parts, fields, { kind = "product", prevTake = "", so
   // 句式别套（验收：二十条点评十九条带「今天」、十六条以「如果你」开头）
   if (isYesterdayPH(source, fields)) { if (parts.some((p) => p.includes("今天"))) errors.push("这是 Product Hunt 昨天的日榜，全文不许说「今天」"); }
   else if (parts[2].includes("今天")) errors.push("点评里不要用「今天」，换个说法");
+  // PH 的 phScore 是综合分不是票数：PH 稿子里一个「票」字都不许有
+  if (isYesterdayPH(source, fields) && parts.some((p) => p.includes("票"))) errors.push("Product Hunt 的分数是综合分，不是票数，全文不许出现「票」");
   if (/^[\s，。「“]*如果你/.test(parts[2])) errors.push("点评不要以「如果你」开头，换个句式");
   // 数字只是佐证：整条最多一个数字字段，且不能出现在 part1（不拿数字开场）
   const numSlots = parts.map((p) => (p.match(/\{\{(\w+)\}\}/g) || []).filter((m) => UNITS[m.slice(2, -2)]).length);

@@ -29,7 +29,8 @@ export const UNITS = {
   //   只能念成「昨天 Product Hunt 日榜第 N 名」，不许说「今天」（sources.js 那一批名次没通过合理性检查时这个字段整批不给）。
   phDailyRank: { before: "昨天 Product Hunt 日榜第 ", after: " 名" },
   // Product Hunt（同一页 Post.launchDayScore）：PH 自己算的上榜当天综合分（投票、讨论、活跃度加权），不是票数，不许说成「票」。
-  phScore: { after: " 分" },
+  //   只能念成「综合分 N 分」（before 强制），不许说「票」（writer.js checkScript 对 PH 稿子全文拦「票」）。
+  phScore: { before: "综合分 ", after: " 分" },
 };
 export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name", "limit"]);
 
