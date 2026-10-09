@@ -69,6 +69,16 @@ test("一个源挂了，别的源照常出", async () => {
   assert.ok(r.items.length >= 9);
 });
 
+test("AIHOT 新版接口：原文链接和来源名取对", () => {
+  const raw = JSON.parse(fx("aihot-v1.json"));
+  const items = parseAIHOT(raw, T);
+  assert.equal(items.length, raw.items.length);
+  items.forEach(shape);
+  assert.equal(items[0].url, raw.items[0].links.original);
+  assert.equal(items[0].fields.origin, raw.items[0].source.name);
+  assert.equal(items[0].fields.permalink, raw.items[0].links.aihot);
+});
+
 test("去重和轮流排", () => {
   const a = parseHN(JSON.parse(fx("hn.json")), T);
   const b = parseAIHOT(JSON.parse(fx("aihot.json")), T);

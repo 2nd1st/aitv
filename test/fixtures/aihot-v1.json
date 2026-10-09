@@ -1,0 +1,85 @@
+{
+ "schemaVersion": 1,
+ "count": 10,
+ "items": [
+  {
+   "rank": 1,
+   "id": "x8r8kta42au39pp06f02shk9f",
+   "title": "Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价",
+   "source": {
+    "name": "Anthropic：Newsroom（网页）"
+   },
+   "links": {
+    "aihot": "https://aihot.news/items/x8r8kta42au39pp06f02shk9f",
+    "original": "https://www.anthropic.com/claude-sonnet-5-5",
+    "story": "https://aihot.virxact.com/story/94903954-cf87-48d8-89a6-eff5deefeaa0"
+   },
+   "sourceCount": 13,
+   "signalCount": 67,
+   "participantCount": 80,
+   "sourceNames": [
+    "X：Claude Devs (@ClaudeDevs)",
+    "X：Arena (@arena)",
+    "IT之家·人工智能",
+    "X：Cognition (@cognition)",
+    "Simon Willison 博客",
+    "MarkTechPost（RSS）",
+    "X：opencode (@opencode)",
+    "X：Artificial Analysis (@ArtificialAnlys)"
+   ],
+   "latestAt": "2026-10-08T20:04:10.000Z"
+  },
+  {
+   "rank": 2,
+   "id": "uir31g728myjry383z17txvrw",
+   "title": "OpenAI向ChatGPT全量用户开放GPT-6与Intelligent UI",
+   "source": {
+    "name": "OpenAI：官网动态（RSS · 排除企业/客户案例）"
+   },
+   "links": {
+    "aihot": "https://aihot.news/items/uir31g728myjry383z17txvrw",
+    "original": "https://openai.com/index/gpt-6-for-everyone/",
+    "story": "https://aihot.virxact.com/story/829ad21a-7429-4a43-9cb1-3c5c8a46c051"
+   },
+   "sourceCount": 10,
+   "signalCount": 36,
+   "participantCount": 46,
+   "sourceNames": [
+    "X：邵猛 (@shao__meng)",
+    "IT之家·人工智能",
+    "X：Mark Chen（OpenAI 首席研究官，@markchen90）",
+    "X：Rohan Paul (@rohanpaul_ai)",
+    "X：Ethan Mollick (@emollick)",
+    "X：Testing Catalog (@testingcatalog)",
+    "The Verge：AI（RSS）",
+    "The Decoder：AI News（RSS）"
+   ],
+   "latestAt": "2026-10-08T02:22:43.000Z"
+  },
+  {
+   "rank": 3,
+   "id": "at5dvel8balkaba9wrggcrqoj",
+   "title": "Anthropic 新政策首次禁止虐待模型",
+   "source": {
+    "name": "Anthropic：Newsroom（网页）"
+   },
+   "links": {
+    "aihot": "https://aihot.news/items/at5dvel8balkaba9wrggcrqoj",
+    "original": "https://www.anthropic.com/news/2026-usage-policy-update",
+    "story": "https://aihot.virxact.com/story/100cfaa3-4eb5-4ba9-8199-65be0d26b885"
+   },
+   "sourceCount": 6,
+   "signalCount": 13,
+   "participantCount": 19,
+   "sourceNames": [
+    "X：Rohan Paul (@rohanpaul_ai)",
+    "X：indigo (@indigox)",
+    "IT之家·人工智能",
+    "The Decoder：AI News（RSS）",
+    "TechCrunch：AI（RSS）",
+    "Anthropic：Newsroom（网页）"
+   ],
+   "latestAt": "2026-10-09T01:55:50.000Z"
+  }
+ ]
+}

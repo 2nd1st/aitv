@@ -101,25 +101,29 @@ export function parseProductHunt(xml, fetchedAt) {
   });
 }
 
+// 兼容两种返回：新版 aihot.news/api/v1（source 是对象、链接在 links 里）和旧版 /api/public（10 月 31 日停用）。
+// 只取白名单字段；notice / hint 这类写给 AI 助手的东西一律不进 item。
 export function parseAIHOT(json, fetchedAt) {
-  return (json.items || []).map((x) =>
-    item({
+  return (json.items || []).map((x) => {
+    const links = x.links || {};
+    const permalink = links.aihot || x.permalink;
+    return item({
       id: `aihot-${x.id}`,
       source: "AIHOT",
-      url: x.url || x.permalink,
+      url: links.original || x.url || permalink,
       fetchedAt,
       publishedAt: x.latestAt ? Date.parse(x.latestAt) : null,
       focus: "sourceCount",
       fields: {
         title: x.title,
-        origin: x.source,
+        origin: typeof x.source === "object" && x.source ? x.source.name : x.source,
         rank: x.rank,
         sourceCount: x.sourceCount,
         discussions: x.signalCount,
-        permalink: x.permalink,
+        permalink,
       },
-    })
-  );
+    });
+  });
 }
 
 // ---------- 抓取 ----------
@@ -128,7 +132,7 @@ export const SOURCES = {
   hn: { url: "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30", kind: "json", parse: parseHN },
   github: { url: "https://github.com/trending?since=daily", kind: "text", parse: parseGitHubTrending },
   producthunt: { url: "https://www.producthunt.com/feed", kind: "text", parse: parseProductHunt },
-  aihot: { url: "https://aihot.virxact.com/api/public/hot-topics", kind: "json", parse: parseAIHOT },
+  aihot: { url: "https://aihot.news/api/v1/hot-topics", kind: "json", parse: parseAIHOT },
 };
 
 // 一个源挂了不影响别的源；errors 里记下来，节目单照常出。
