@@ -22,3 +22,21 @@ if (live === commit) {
 } else {
   console.error(`✗ 线上 commit 是 ${live}，不是 ${commit}`); process.exit(1);
 }
+
+// wrangler 在 routes 那步报错就不会再去设定时触发器（[triggers] crons），这里按 wrangler.toml 补设、再读回来核对。
+// 用的是同一个 CLOUDFLARE_API_TOKEN，走的是 wrangler 本来要调的同一个接口（Workers Scripts → schedules）。
+import { readFileSync } from "node:fs";
+const toml = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
+const name = /^name\s*=\s*"([^"]+)"/m.exec(toml)[1];
+const crons = (/^\[triggers\][^[]*?crons\s*=\s*\[([^\]]*)\]/ms.exec(toml)?.[1] || "").match(/"[^"]+"/g)?.map((x) => x.slice(1, -1)) || [];
+const token = process.env.CLOUDFLARE_API_TOKEN;
+const acct = process.env.CLOUDFLARE_ACCOUNT_ID || (await (await fetch("https://api.cloudflare.com/client/v4/accounts", { headers: { authorization: `Bearer ${token}` } })).json()).result?.[0]?.id;
+const api = `https://api.cloudflare.com/client/v4/accounts/${acct}/workers/scripts/${name}/schedules`;
+const H = { authorization: `Bearer ${token}`, "content-type": "application/json" };
+const cur = (await (await fetch(api, { headers: H })).json()).result?.schedules?.map((x) => x.cron) || [];
+if (JSON.stringify([...cur].sort()) !== JSON.stringify([...crons].sort())) {
+  const r = await (await fetch(api, { method: "PUT", headers: H, body: JSON.stringify(crons.map((cron) => ({ cron }))) })).json();
+  if (!r.success) { console.error("✗ 定时触发器设置失败", JSON.stringify(r.errors)); process.exit(1); }
+}
+const now = (await (await fetch(api, { headers: H })).json()).result?.schedules?.map((x) => x.cron) || [];
+console.log(`定时触发器：${now.join(", ") || "无"}`);
