@@ -129,3 +129,4 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
 @media (prefers-reduced-motion:reduce){
   .listen,.golive{transition:opacity 150ms ease}
 }
+.rank{display:inline-block;margin-top:.9em;font-size:1.25em;font-weight:600;padding:.25em .7em;border-radius:.4em;color:var(--ink-2);background:rgba(255,255,255,.08);font-variant-numeric:tabular-nums}

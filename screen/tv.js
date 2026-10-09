@@ -41,8 +41,6 @@ const pad = (n) => String(n).padStart(2, "0");
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
 const STAT = [
-  ["phDailyRank", (v) => `PH 昨日第 ${fmt.format(v)} 名`],
-  ["phScore", (v) => `综合分 ${fmt.format(v)}`],
   ["points", (v) => `${fmt.format(v)} 分`],
   ["comments", (v) => `${fmt.format(v)} 评论`],
   ["stars_today", (v) => `今日 +${fmt.format(v)} 星`],
@@ -139,7 +137,10 @@ export function createTV(root, { channel = "AI 今天", onListen, onPower, onScr
     const head = link("headline", item.url, f.title_zh || f.title || "");
     const sub = el("div", "sub"); const lab = el("span", "lab"); const txt = el("span", "txt");
     sub.append(lab, txt);
-    lower.append(meta, head, sub);
+    lower.append(meta, head);
+    // PH 名次只做一枚小标签，放在标题下面；综合分不上画面（稿子里需要时念）
+    if (Number.isInteger(f.phDailyRank) && f.phDailyRank >= 1) lower.append(el("span", "rank", `Product Hunt 昨日第 ${f.phDailyRank} 名`));
+    lower.append(sub);
     cur = { id: item.id, lower, sub, lab, txt, lineKey: "" };
   }
 
