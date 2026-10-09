@@ -166,21 +166,17 @@ test("自动上线打开：插在当前在播那条后面，switchAt 在边界�
 const ago = (h) => T0 - h * 3600_000;
 const aged = (n, h, p = "o") => Array.from({ length: n }, (_, i) => ({ id: `${p}${h}-${i}`, audio: `/audio/${(p + h + "x" + i).padEnd(16, "0").slice(0, 16)}.mp3`, duration: 20, publishedAt: ago(h), fetchedAt: T0 }));
 
-test("超龄：6 小时内全留；不足 15 条用 6–12 小时的补（越新越先）；超过 12 小时一律下线", () => {
-  assert.equal(dropOld([...aged(16, 1), ...aged(5, 7)], T0).length, 16);                 // 6 小时内够 15，超龄的全下
-  const f = dropOld([...aged(10, 1), ...aged(3, 7), ...aged(4, 9)], T0);                  // 10 + 补 5（先 7 小时的 3 条，再 9 小时的 2 条）
-  assert.equal(f.length, 15);
-  assert.equal(f.filter((x) => x.id.startsWith("o7")).length, 3);
-  assert.equal(f.filter((x) => x.id.startsWith("o9")).length, 2);
-  assert.equal(dropOld([...aged(3, 1), ...aged(20, 13)], T0).length, 3);                // 超过 12 小时的不当补位，哪怕只剩 3 条
+test("72 小时：所有来源一个窗口，72 小时内全留，超过的一律下线（没有 15 条门槛和补位）", () => {
+  assert.equal(dropOld([...aged(16, 1), ...aged(5, 50), ...aged(3, 73)], T0).length, 21);
+  assert.equal(dropOld([...aged(3, 1), ...aged(20, 73)], T0).length, 3);
 });
 
-test("边界：全部超过 12 小时 → 不出空节目单，保留最新的那一批（keptStale）", () => {
-  const out = dropOld([...aged(2, 20), ...aged(4, 13), ...aged(3, 30)], T0);
-  assert.equal(out.length, 5); assert.equal(out.keptStale, true);               // 发布时间最新的 5 条
-  assert.deepEqual(out.map((x) => x.id).sort(), ["o13-0", "o13-1", "o13-2", "o13-3", "o20-0"]);
+test("边界：全部超过 72 小时 → 不出空节目单，保留时间最新的 5 条，标 stale", () => {
+  const out = dropOld([...aged(2, 80), ...aged(4, 73), ...aged(3, 90)], T0);
+  assert.equal(out.length, 5); assert.equal(out.keptStale, true);
+  assert.deepEqual(out.map((x) => x.id).sort(), ["o73-0", "o73-1", "o73-2", "o73-3", "o80-0"]);
   assert.ok(out.every((x) => x.stale === true));
-  assert.equal(dropOld([...aged(4, 13)], T0, { others: 1 }).length, 0);          // 这一轮有新条目插进来：旧的照下
+  assert.equal(dropOld([...aged(4, 73)], T0, { others: 1 }).length, 0);          // 这一轮有新条目插进来：旧的照下
 });
 
 test("15 条门槛不挡新条目：只有 5 条在播也照样插", () => {
@@ -237,13 +233,13 @@ test("use / rollback 之后：下一轮把 6 小时内、没下架的已上线�
   assert.ok(!(again.plan?.reinserted || []).length);
 });
 
-test("插回只插 6 小时内、没下架的", async () => {
+test("插回只插 72 小时内、没下架的", async () => {
   const x = deps();
   await runCron(x.d, { autoPublish: true });
   const st = await x.kv.get("pipe:item:" + ID);
   const used = { current: { version: "v2", ...buildSchedule(onAir, T0) }, next: null, switchAt: null };
   await x.kv.put("timeline", used);
-  const late = await runCron({ ...x.d, now: st.seedItem.publishedAt + 6 * 3600_000 + 60_000 }, { autoPublish: true, maxNewPerDay: 0 });
+  const late = await runCron({ ...x.d, now: st.seedItem.publishedAt + 72 * 3600_000 + 60_000 }, { autoPublish: true, maxNewPerDay: 0 });
   assert.ok(!(late.plan?.reinserted || []).includes(ID));
   await x.kv.put("timeline", used);
   await x.kv.put("takedown", addTakedown(null, { audio: st.seedItem.audio }));
@@ -255,10 +251,10 @@ test("firstSentence 只取第一句", () => assert.equal(firstSentence("甲乙�
 
 test("年龄按 publishedAt，不按 fetchedAt；没有 publishedAt 的（GitHub Trending）当未知、下线", () => {
   const justFetched = (id, pubH) => ({ id, audio: `/audio/${id.padEnd(16, "0")}.mp3`, duration: 20, fetchedAt: T0, publishedAt: pubH == null ? null : ago(pubH) });
-  const out = dropOld([justFetched("a", 2), justFetched("b", 13), justFetched("c", null), justFetched("d", 8)], T0);
+  const out = dropOld([justFetched("a", 2), justFetched("b", 73), justFetched("c", null), justFetched("d", 50)], T0);
   assert.deepEqual(out.map((x) => x.id), ["a", "d"]);
   // 下线经 switchAt：planPublish 只出下一版，现在播的不切
-  const tl = { current: { version: "v", ...buildSchedule([justFetched("a", 2), justFetched("b", 13), justFetched("c", null)], T0) }, next: null, switchAt: null };
+  const tl = { current: { version: "v", ...buildSchedule([justFetched("a", 2), justFetched("b", 73), justFetched("c", null)], T0) }, next: null, switchAt: null };
   const p = planPublish(tl, T0 + 1000, {});
   assert.ok(p.ok && p.timeline.switchAt >= T0 + 1000 + 150_000);
   assert.deepEqual(p.timeline.next.items.map((x) => x.id), ["a"]);
@@ -266,7 +262,7 @@ test("年龄按 publishedAt，不按 fetchedAt；没有 publishedAt 的（GitHub
 });
 
 test("全部超过 12 小时：保留最新 5 条标 stale，下一轮不再反复改；节目单每条都带 publishedAt", () => {
-  const its = Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, audio: `/audio/${("s" + i).padEnd(16, "0")}.mp3`, duration: 20, publishedAt: ago(13 + i) }));
+  const its = Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, audio: `/audio/${("s" + i).padEnd(16, "0")}.mp3`, duration: 20, publishedAt: ago(73 + i) }));
   const tl = { current: { version: "v", ...buildSchedule(its, T0) }, next: null, switchAt: null };
   const p = planPublish(tl, T0, {});
   assert.ok(p.ok && p.keptStale); assert.equal(p.count, 5);
@@ -285,7 +281,7 @@ test("RANKED_SOURCES 关掉 GitHub：候选没有发布时间 → skipped:no-pub
   assert.equal(x.calls.brief + x.calls.tts, 0);
 });
 
-test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到的时间；第二次看到不刷新，过了 24 小时就跳过", async () => {
+test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到的时间；第二次看到不刷新，过了 72 小时就跳过", async () => {
   const x = deps();
   const out = await runCron({ ...x.d, fetchAll: undefined, ranked: undefined }, {});
   assert.ok(out.log.some((l) => l.startsWith("新条目 gh-")), out.log.join("\n"));
@@ -295,7 +291,7 @@ test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到
   assert.equal(st.item.rankedAt, T0);
   await x.kv.put("pipe:index", { seen: [] });
   await x.kv.delete(`pipe:item:${ID}`);
-  const later = await runCron({ ...x.d, fetchAll: undefined, ranked: undefined, now: T0 + 25 * 3600_000 }, { maxNewPerDay: 40 });
+  const later = await runCron({ ...x.d, fetchAll: undefined, ranked: undefined, now: T0 + 73 * 3600_000 }, { maxNewPerDay: 40 });
   assert.equal((await x.kv.get("rank:firstSeen"))[ID].first, T0);
   assert.ok((await x.kv.get("pipe:index")).skipped.some((s) => s.id === ID && s.why === "stale"), later.log.join("\n"));
 });
@@ -303,11 +299,11 @@ test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到
 // ---------- 2026-10-09 第二批：榜单 24 小时、每轮最多 2 条、按墙钟留余量 ----------
 import { newPerRun, MAX_NEW_PER_RUN, STEP_BACK_AT, STEP_MAX_MS } from "../src/pipeline.js";
 
-test("榜单类（PH / GitHub）从 rankedAt 起 24 小时有效、不当补位；文章仍是 6 / 12 小时", () => {
+test("榜单类（PH / GitHub）按 rankedAt、文章按 publishedAt，同一个 72 小时窗口", () => {
   const r = (id, h, source = "Product Hunt") => ({ id, source, audio: `/audio/${id.padEnd(16, "0")}.mp3`, duration: 20, fetchedAt: T0, rankedAt: ago(h) });
   const a = (id, h) => ({ id, source: "Hacker News", audio: `/audio/${id.padEnd(16, "0")}.mp3`, duration: 20, fetchedAt: T0, publishedAt: ago(h) });
-  const out = dropOld([r("ph20", 20), r("gh13", 13, "GitHub Trending"), r("ph25", 25), a("hn3", 3), a("hn9", 9), a("hn13", 13)], T0).map((x) => x.id);
-  assert.deepEqual(out, ["ph20", "gh13", "hn3", "hn9"]);   // 榜单 24 小时内都算新鲜；25 小时的哪怕不足 15 条也下；文章 9 小时当补位
+  const out = dropOld([r("ph70", 70), r("gh50", 50, "GitHub Trending"), r("ph73", 73), a("hn3", 3), a("hn71", 71), a("hn73", 73)], T0).map((x) => x.id);
+  assert.deepEqual(out, ["ph70", "gh50", "hn3", "hn71"]);
 });
 
 test("每轮新上：在播有效条目 < 12 → 2 条；>= 12 → 1 条（常量）", () => {
@@ -348,4 +344,29 @@ test("墙钟：剩下的时间不够跑完这一步就不开（留给下一轮�
   const st0 = { id: "z", item: { id: "z", source: "Hacker News", publishedAt: T0 }, step: "script", status: "pending", results: { brief: BRIEF }, tries: {}, errors: [] };
   const st = await advance(st0, x.d, { deadline: Date.now() + STEP_MAX_MS.script - 1000 });
   assert.equal(st.status, "pending"); assert.equal(st.step, "script"); assert.equal(x.calls.script, 0);
+});
+
+// ---------- 乔木 2026-10-09 14:48：72 小时窗口；插回线上 seed 里被下掉的；插入那批从新到旧 ----------
+test("插回 seed 里被下掉的：72 小时内、音频在 R2、没下架、内容安全的回来（零合成），整批从新到旧排在当前条目后面", async () => {
+  const hex = (id) => [...id].map((c) => c.charCodeAt(0).toString(16)).join("").padEnd(16, "0").slice(0, 16);
+  const s = (id, h, extra = {}) => ({ ...onAir[0], id, source: "Hacker News", publishedAt: ago(h), audio: `/audio/${hex(id)}.mp3`, take: `${id} 的点评`,
+    kind: "news", brief: { kind: "news", what: `${id} 是什么`, who: "谁会用" }, script: [{}, {}, {}], rounds: [{ part: "what" }, { part: "who" }, { part: "take" }], ...extra });
+  const seedItems = [s("old20", 20), s("old5", 5), s("old80", 80), s("td", 3), s("noaudio", 4), s("bad", 6, { brief: { kind: "news", what: "免费下载盗版电影", who: "x" } }), s("onair", 1)];
+  const tl = { current: { version: "v1", ...buildSchedule([s("onair", 1), s("cur", 2)], T0 - 600_000) }, next: null, switchAt: null };
+  const r2init = {}; for (const it of seedItems) if (it.id !== "noaudio") r2init[it.audio.replace("/audio/", "")] = fakeMp3();
+  const kv = memKV({ timeline: tl, pointer: { version: "v1" }, "seed:v1": { version: "v1", items: seedItems }, "pipe:index": { seen: [] },
+    takedown: addTakedown(null, { audio: s("td", 3).audio }) });
+  const x = deps({ kv, r2: memR2(r2init) });
+  const out = await runCron(x.d, { autoPublish: true, maxNewPerDay: 0 });
+  const t = await kv.get("timeline");
+  assert.ok(out.plan, out.log.join("\n"));
+  assert.deepEqual(out.plan.reinserted.sort(), ["old20", "old5"], out.log.join("\n"));
+  assert.deepEqual(t.next.items.slice(0, 2).map((i) => i.id), ["old5", "old20"]); // 插进来的从新到旧，排在最前（切换那一刻之后）
+  assert.deepEqual(t.next.items.slice(2).map((i) => i.id).sort(), ["cur", "onair"]);
+  assert.ok(t.switchAt >= T0 + 150_000);
+  assert.equal(x.calls.tts, 0);
+  assert.ok(out.log.some((l) => /bad：内容安全没过/.test(l)), out.log.join("\n"));
+  // 再跑一轮：已经在时间线里了，不重复插
+  const again = await runCron({ ...x.d, now: t.switchAt + 1000 }, { autoPublish: true, maxNewPerDay: 0 });
+  assert.ok(!(again.plan?.reinserted || []).length);
 });

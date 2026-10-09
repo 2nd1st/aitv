@@ -79,7 +79,7 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 - 点评开头跟前后两条撞了：改写点评第一句（一条一天一次），重新校验、重新合成（占额度），再上；改了还撞就这一轮先不上新的。
 - 超龄：超过 6 小时的下线；不足 15 条时用 6–12 小时的旧条目补到 15（越新越先）；超过 12 小时的一律下线，哪怕不足 15 条。15 条门槛和补位永远不挡新条目。全部超过 12 小时时保留最新的那一批（`keptStale`），不出空节目单。
 - 新鲜度（2026-10-09，Whistle 事故后）：按来源的真实发布时间 `publishedAt` 判，不按抓取时间。候选超过 6 小时 → 记 `skipped:stale`，不读原文、不做摘要、不合成；AIHOT 读到原文日期后马上判；在途条目每一步之前再判；上线那一刻再判一次。HN = 帖子发到 HN 的时间；PH 日榜 = featuredAt；榜单类（`RANKED_SOURCES`，默认 `producthunt,github`）按上榜时间 `rankedAt`（`dateKind: "ranked"`）：PH = 那份日榜结束的时间（洛杉矶午夜），GitHub = 第一次在 trending 上看到（KV `rank:firstSeen`）。没有任何真实时间 = unknown → 候选记 `skipped:no-pubdate`，在播的下线；不拿抓取时间顶替。
-- 下线（同一套时间，`src/freshness.js`）：文章超过 6 小时下线；不足 15 条用 6–12 小时的文章补；文章超过 12 小时一律下线。榜单类（PH / GitHub）从 rankedAt 起 24 小时有效，不当补位，满 24 小时就下（PH 今天 15:00 结束的榜播到明天 15:00）。
+- 有效期（乔木 2026-10-09 14:48，`FRESH_WINDOW_MS` = 72 小时，`src/freshness.js`）：所有来源一个窗口，文章按 publishedAt、PH / GitHub 按 rankedAt。在播 = 做完的、没下架的、72 小时以内的全部；没有补位、没有 15 条门槛。72 小时内一条都没有 → 留最新 5 条标 stale。候选超过 72 小时在任何模型 / 合成之前就跳过。cron 每轮把线上 seed 里做完了（音频在 R2）、72 小时内、没下架、内容安全、单条校验能过、不在时间线里的条目插回，零合成。插进来的一批从新到旧，排在切换那一刻正在播的那条后面，全部经 switchAt。
 - 每轮新条目：最多 2 条（`MAX_NEW_PER_RUN`）；在播有效条目（非 stale、在有效期内）≥ 12 条（`STEP_BACK_AT`）时每轮 1 条；每天 40 条上限不变。没花钱就被跳过的不占每天名额。
 - 墙钟：cron 每次最多 15 分钟；一轮截止 14 分钟，每一步开跑前按最坏耗时（`STEP_MAX_MS`）确认能跑完，不够就留到下一轮。12 小时内一条都不剩（且这一轮没有新条目）→ 保留时间最新的 5 条、标 `stale: true`，屏幕右上角小字「N 小时前」。全部经 switchAt。`/api/schedule` 每条带 `publishedAt`、`dateKind`（榜单类带 `rankedAt`）。
 - 发布时间（`src/pubdate.js`）：① 原文页面 → ② 官方 RSS（按域名查表，现在有 openai.com/news/rss.xml；按链接匹配，去 query / 结尾斜杠）→ ③ 包打听给的厂商官方 X 帖子时间（输入带 `pubDate` + `pubDateSource: "x"`）→ ④ 都没有就不播。永远不用抓取时间。条目上记 `pubDateSource`（page / rss / x）。

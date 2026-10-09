@@ -34,14 +34,14 @@ function deps(hits) {
 }
 
 test("HN publishedAt = 帖子发到 HN 的时间（created_at_i），不是抓取时间", () => {
-  const [it] = parseHN({ hits: [hit(1, 13)] }, T0);
-  assert.equal(it.publishedAt, T0 - 13 * 3600_000);
+  const [it] = parseHN({ hits: [hit(1, 73)] }, T0);
+  assert.equal(it.publishedAt, T0 - 73 * 3600_000);
   assert.equal(it.fetchedAt, T0);
   assert.ok(isStale(it, T0));
 });
 
 test("Whistle 场景：候选全超过 6 小时 → 全部 skipped:stale，不开新条目、不读原文、不调模型 / 豆包", async () => {
-  const x = deps([hit(50008427, 12.8), hit(2, 6.1)]);
+  const x = deps([hit(50008427, 80), hit(2, 72.1)]);
   const out = await runCron(x.d, { autoPublish: true, maxNewPerDay: 40 });
   const idx = await x.kv.get("pipe:index");
   assert.ok(!out.log.some((l) => l.startsWith("新条目")), out.log.join("\n"));
@@ -53,7 +53,7 @@ test("Whistle 场景：候选全超过 6 小时 → 全部 skipped:stale，不�
 });
 
 test("新鲜的照常开：跳过超龄的，选 6 小时内的那条", async () => {
-  const x = deps([hit(1, 13), hit(2, 2)]);
+  const x = deps([hit(1, 73), hit(2, 2)]);
   const out = await runCron(x.d, { maxNewPerDay: 40 });
   assert.ok(out.log.includes("新条目 hn-2"), out.log.join("\n"));
   assert.deepEqual((await x.kv.get("pipe:index")).skipped.map((s) => s.id), ["hn-1"]);
@@ -63,10 +63,10 @@ test("在途变旧（或 AIHOT 读原文后才知道日期）：下一步之前�
   const x = deps([]);
   const base = { id: "a1", step: "brief", status: "pending", results: {}, tries: {}, errors: [] };
   // AIHOT：读原文那步补出来的发布时间 7 小时前
-  let st = await advance({ ...base, item: { id: "a1", source: "AIHOT", publishedAt: null, dateUnknown: true }, results: { read: { text: "x", patch: { publishedAt: T0 - 7 * 3600_000, dateUnknown: false } } } }, x.d);
+  let st = await advance({ ...base, item: { id: "a1", source: "AIHOT", publishedAt: null, dateUnknown: true }, results: { read: { text: "x", patch: { publishedAt: T0 - 73 * 3600_000, dateUnknown: false } } } }, x.d);
   assert.equal(st.status, "skipped"); assert.match(st.why, /^stale/);
   // 等额度等到第二天：tts 之前再判
-  st = await advance({ ...base, step: "tts", item: { id: "h", source: "Hacker News", publishedAt: T0 - 5 * 3600_000 }, results: { validate: { hash: "0".repeat(16) }, script: { lines: ["a", "b", "c"] } } }, { ...x.d, now: T0 + 2 * 3600_000 });
+  st = await advance({ ...base, step: "tts", item: { id: "h", source: "Hacker News", publishedAt: T0 - 71 * 3600_000 }, results: { validate: { hash: "0".repeat(16) }, script: { lines: ["a", "b", "c"] } } }, { ...x.d, now: T0 + 2 * 3600_000 });
   assert.equal(st.status, "skipped");
   assert.equal(x.calls.brief + x.calls.tts, 0);
 });

@@ -35,7 +35,7 @@ test("timeOf / annotate：榜单类按 rankedAt，文章类按 publishedAt，都
 
 test("下线规则用同一套时间：开着 GitHub 留，关了就下", () => {
   const a = (id, o) => ({ id, audio: `/audio/${id.padEnd(16, "0")}.mp3`, duration: 20, ...o });
-  const items = [a("gh", { source: "GitHub Trending", fetchedAt: NOW - 2 * 3600e3 }), a("hn", { source: "Hacker News", fetchedAt: NOW, publishedAt: NOW - 13 * 3600e3 }),
+  const items = [a("gh", { source: "GitHub Trending", fetchedAt: NOW - 2 * 3600e3 }), a("hn", { source: "Hacker News", fetchedAt: NOW, publishedAt: NOW - 73 * 3600e3 }),
     a("hn2", { source: "Hacker News", fetchedAt: NOW, publishedAt: NOW - 3600e3 })];
   assert.deepEqual(dropOld(items, NOW).map((x) => x.id), ["gh", "hn2"]);
   assert.deepEqual(dropOld(items, NOW, { ranked: parseRanked("none") }).map((x) => x.id), ["hn2"]);
