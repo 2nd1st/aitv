@@ -1,0 +1,31 @@
+{
+ "hits": [
+  {
+   "objectID": "50006832",
+   "title": "Trump administration is suspending Microsoft from a green card program",
+   "url": "https://apnews.com/article/h1b-visa-program-vance-microsoft-e7b3a407f822702b269ee277d21343ea",
+   "points": 808,
+   "num_comments": 1388,
+   "created_at_i": 1791472500,
+   "author": "alephnerd"
+  },
+  {
+   "objectID": "50008427",
+   "title": "Whistle: Speech to Text in 16.9 MB",
+   "url": "https://cactuscompute.com/blog/whistle",
+   "points": 483,
+   "num_comments": 112,
+   "created_at_i": 1791478779,
+   "author": "gmays"
+  },
+  {
+   "objectID": "50000488",
+   "title": "Why isn't the industry freaking out about DeepSeek 4.1 Flash?",
+   "url": "https://www.dgt.is/blog/2026-10-07-deepseek-freek-out/",
+   "points": 352,
+   "num_comments": 304,
+   "created_at_i": 1791418488,
+   "author": "jonotime"
+  }
+ ]
+}
