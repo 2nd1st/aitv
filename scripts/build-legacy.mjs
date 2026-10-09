@@ -1,5 +1,5 @@
-// 兼容版：给系统 WebView 停在 Chrome 61 的老安卓设备（以及 android/ 里的 App 壳）用。
-// 产物在 public/legacy/（不进仓库），由 Worker 当静态资源发出去：/legacy/；android/ 构建时也会打包这个目录
+// 兼容版：给系统 WebView 停在 Chrome 61 的老安卓设备用。
+// 产物在 public/legacy/（不进仓库），由 Worker 当静态资源发出去：/legacy/
 //   - public/app.js（含 /screen/tv.js）打成一个普通 <script>，语法降到 chrome61
 //   - 顶层 await 老内核不认：把 app.js 的主体包进 async 函数
 //   - 1cqw 由 legacy/shim.js 换成 CSS 变量 --cqw
@@ -49,7 +49,7 @@ await build({
 });
 await cp(join(root, "legacy/index.html"), join(out, "index.html"));
 await cp(join(root, "legacy/legacy.css"), join(out, "legacy.css"));
-// /legacy/ 自包含：android/ 的 App 把整个目录打进 APK，服务器还没部署兼容版时也能用
+// /legacy/ 自包含：样式和脚本都在这个目录里，单独部署或打包都不缺文件
 await cp(join(root, "screen/tv.css"), join(out, "tv.css"));
 await cp(join(root, "public/site.css"), join(out, "site.css"));
 console.log(`legacy build → ${out} (${TARGET})`);

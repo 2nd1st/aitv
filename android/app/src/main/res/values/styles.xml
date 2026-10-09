@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.Aitv" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen">
-        <item name="android:windowBackground">@color/room</item>
-        <item name="android:colorBackground">@color/room</item>
-    </style>
-    <color name="room">#0a0a0b</color>
-</resources>

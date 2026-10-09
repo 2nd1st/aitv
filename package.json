@@ -8,8 +8,7 @@
     "test": "node --test test/*.test.js",
     "build": "rm -rf public/screen && cp -r screen public/screen && node scripts/build-legacy.mjs",
     "deploy": "node scripts/deploy.mjs",
-    "legacy:serve": "node scripts/legacy-serve.mjs",
-    "android": "npm run build && cd android && ./gradlew assembleRelease"
+    "legacy:serve": "node scripts/legacy-serve.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

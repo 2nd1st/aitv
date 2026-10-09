@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 只在 debug 包里允许 http，方便连本地预览：adb shell am start -n ai.qiaomu.aitv.debug/ai.qiaomu.aitv.MainActivity -e url http://localhost:8788/legacy/ -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:usesCleartextTraffic="true" />
-</manifest>

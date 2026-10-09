@@ -19,7 +19,7 @@ test("legacy build: 产物里没有 Chrome 61 不认的语法", () => {
   assert.match(js, /--cqw/, "shim 没打进去");
 });
 
-test("legacy build: /legacy/ 自包含（App 把整个目录打进 APK）", () => {
+test("legacy build: /legacy/ 自包含（样式和脚本都在目录里）", () => {
   const html = readFileSync("public/legacy/index.html", "utf8");
   for (const ref of html.matchAll(/(?:href|src)="(\/[^"]+)"/g)) {
     if (ref[1] === "/icon.svg") continue;
