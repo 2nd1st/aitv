@@ -1,4 +1,4 @@
-import { buildSchedule } from "./schedule.js";
+import { buildSchedule, publicItem } from "./schedule.js";
 
 export default {
   async fetch(req, env) {
@@ -11,7 +11,7 @@ export default {
       let raw = env.SCHEDULE ? await env.SCHEDULE.get("current") : null;
       if (!raw) raw = await (await env.ASSETS.fetch(new URL("/seed.json", url))).text();
       const seed = JSON.parse(raw);
-      const sched = seed.anchor ? seed : buildSchedule(seed.items, seed.anchorMs ?? 0);
+      const sched = seed.anchor ? { ...seed, items: seed.items.map(publicItem) } : buildSchedule(seed.items, seed.anchorMs ?? 0);
       return Response.json(sched, { headers: { "cache-control": "no-store" } });
     }
     return env.ASSETS.fetch(req);

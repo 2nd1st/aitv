@@ -60,3 +60,10 @@ test("README 和产品页能抽出可读正文", () => {
   const html = htmlToText(fx("ph-page.html"));
   assert.ok(html.length > 200 && !/<script/i.test(html));
 });
+
+test("没配模型时也不把原文挂到 item 上", async () => {
+  const r = await enrich(gh, { fetchImpl: fakeFetch });
+  assert.equal(r.brief, null);
+  assert.ok(!("materialText" in r));
+  assert.ok(!JSON.stringify(r).includes(markdownToText(fx("readme.md")).slice(0, 80)));
+});

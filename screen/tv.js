@@ -47,6 +47,7 @@ const STAT = [
   ["points", (v) => `${fmt.format(v)} 分`],
   ["comments", (v) => `${fmt.format(v)} 评论`],
   ["stars_today", (v) => `今日 +${fmt.format(v)} 星`],
+  ["starsToday", (v) => `今日 +${fmt.format(v)} 星`], // sources.js 的字段名是 starsToday
   ["stars", (v) => `${fmt.format(v)} 星`],
   ["votes", (v) => `${fmt.format(v)} 票`],
 ];
@@ -56,14 +57,14 @@ const NUM_LABEL = { points: "Hacker News 得分", comments: "评论", stars: "Gi
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const hasCJK = (s) => /[\u3400-\u9fff]/.test(s || "");
 
-// 讲解分段：是什么 / 跟你有关 / 一句点评（没有点评就用亮点）
+// 讲解分段：是什么 / 跟你有关 / AI 点评（没有点评就用亮点）
 function partsOf(item) {
   const f = item.fields || {};
   const take = item.take ?? f.take;
   const list = [];
   if (f.what) list.push({ key: "what", label: "是什么", text: f.what });
   if (f.who) list.push({ key: "who", label: "跟你有关", text: f.who });
-  if (take) list.push({ key: "take", label: "一句点评", text: take });
+  if (take) list.push({ key: "take", label: "AI 点评", text: take }); // 点评是模型写的，标明 AI，不署任何人名
   else if (f.highlight) list.push({ key: "highlight", label: "亮点", text: f.highlight });
   return list;
 }

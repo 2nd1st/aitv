@@ -19,7 +19,7 @@ tv.setPaused(true | false);     // 暂停态的画面：「已暂停」+「回�
 
 画面里读的 item 字段：
 - `fields.what` / `fields.who`：「是什么」「跟你有关」。
-- `take`（或 `fields.take`）：一句点评。没有点评时用 `fields.highlight`，显示为「亮点」。
+- `take`（或 `fields.take`）：一句点评，模型写的，画面上标「AI 点评」（不署人名）。没有点评时用 `fields.highlight`，显示为「亮点」。
 - `fields.title_zh`：中文标题，有的话大字显示中文，原标题以小字显示在下面。
 - `rounds[i].part`：`"what"`、`"who"`、`"take"`。念到哪段，哪段就亮，后面的段还没出现。不填的话按时长平均分。
 - 数字只从 `fields` 读，做成角标（名次、分、评论、星、票），不做正文。

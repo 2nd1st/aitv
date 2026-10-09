@@ -13,15 +13,9 @@
 const UA = "Mozilla/5.0 (aitv.qiaomu.ai; +https://aitv.qiaomu.ai)";
 const MAX_CHARS = 6000;
 
-export const WORD_WHITELIST = ["一句话", "一个", "一款", "一种", "一下", "一起", "一些", "一直", "一样", "唯一", "统一", "万一", "十分"];
-const ARABIC = /[0-9０-９]/;
-const CN_NUM = /[零〇一二三四五六七八九十百千万亿两半倍壹贰叁肆伍陆柒捌玖拾佰仟]/;
-
-export function hasNumber(text) {
-  let s = String(text);
-  for (const w of WORD_WHITELIST) s = s.split(w).join("");
-  return ARABIC.test(s) || CN_NUM.test(s);
-}
+// 数字规则和白名单只在 digits.js 一处定义，validate.js 共用。
+import { hasNumber, WORD_WHITELIST } from "./digits.js";
+export { hasNumber, WORD_WHITELIST };
 
 const decode = (s) =>
   String(s)
@@ -99,7 +93,8 @@ ${material.text}
 
 硬性要求：
 - 每项不超过四十个字，口语化，能直接念出来。
-- 三项里一律不写数字，包括阿拉伯数字和中文数字、倍数（如“十倍”“三成”“两个”），也不写版本号。要表达程度就用“更快”“大幅”这类词。
+- 三项里一律不写数字，包括阿拉伯数字和中文数字、倍数（如“十倍”“三成”“两个”“新一代”“第一”“一键”），也不写版本号和带数字的产品名（用“它”或去掉数字的叫法）。要表达程度就用“更快”“大幅”这类词。
+- 注意下面这些常见说法也含数字，不许用：一套、一位、一群、一堆、一眼、一时、一次、一点、一键、一开口、一代、第一、两者、三维、十足、半天、百科、千万。改成「整套」「有位」「不少」「马上」「立体」等说法。只有这些词可以带「一」或「十」：一个、一款、一种、一句话、一下、一起、一些、一直、一样、唯一、统一、万一、十分。
 - 素材里没有的信息不要补，不确定就写得保守一些。`;
 }
 
@@ -121,13 +116,19 @@ export function parseBrief(text) {
   try { return JSON.parse(m[0]); } catch { return null; }
 }
 
-export async function enrich(item, { llm, fetchImpl = fetch } = {}) {
+export async function enrich(item, { llm, fetchImpl = fetch, retries = 0 } = {}) {
   const material = await fetchMaterial(item, { fetchImpl });
   if (!material) return { ...item, brief: null, briefError: "原文读不到" };
-  if (!llm) return { ...item, material: { url: material.url, chars: material.text.length }, materialText: material.text, brief: null, briefError: "没有配模型" };
-  let b;
-  try { b = parseBrief(await llm(briefPrompt(item, material))); } catch (e) { return { ...item, brief: null, briefError: `模型出错：${e.message || e}` }; }
-  const chk = checkBrief(b);
+  // 原文只在这个函数里用来提炼，不挂到 item 上，不进 seed / 节目单
+  if (!llm) return { ...item, material: { url: material.url, chars: material.text.length }, brief: null, briefError: "没有配模型" };
+  // 不合格带着错误重写一次（retries 次），还不合格 brief = null
+  let b, chk;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const fb = attempt && chk ? `\n上一次的输出没通过检查：${chk.errors.join("；")}。注意「新一代」「第一」「一键」「两者」「十足」这类词也算数字，换个说法。` : "";
+    try { b = parseBrief(await llm(briefPrompt(item, material) + fb)); } catch (e) { return { ...item, brief: null, briefError: `模型出错：${e.message || e}` }; }
+    chk = checkBrief(b);
+    if (chk.ok) break;
+  }
   if (!chk.ok) return { ...item, brief: null, briefError: chk.errors.join("；") };
   const brief = { what: b.what.trim(), who: b.who.trim(), highlight: b.highlight.trim() };
   return { ...item, brief, fields: { ...item.fields, ...brief }, material: { url: material.url, chars: material.text.length } };

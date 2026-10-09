@@ -47,6 +47,10 @@ function prefetchAround(i) {
 prefetchAround(locate(schedule, now()).i);
 
 let on = false, playing = null; // playing: { id, audio }
+// 本地时间线：直播位置 = 服务器时间；暂停后继续会落后直播 lag 毫秒，「回到直播」清零。
+let paused = false, frozenAt = 0, lag = 0;
+const vnow = () => (paused ? frozenAt : now() - lag);
+
 function syncAudio(item, t) {
   const a = audioFor(item);
   if (!playing || playing.id !== item.id) {
@@ -57,25 +61,67 @@ function syncAudio(item, t) {
     prefetchAround(schedule.items.indexOf(item));
     return;
   }
+  // 暂停后继续：从时间线上的位置接着放
+  if (a.paused && !a.ended && !(t >= (a.duration || Infinity) - 0.05)) {
+    a.currentTime = Math.max(0, t);
+    a.play().catch(() => {});
+    return;
+  }
   // 漂移超过 0.25 秒就拉回来
   if (!a.paused && Math.abs(a.currentTime - t) > 0.25 && t < a.duration) a.currentTime = t;
+}
+
+function pause() {
+  if (paused || !on) return;
+  frozenAt = now() - lag;   // 画面定格在这一刻
+  paused = true;
+  playing?.audio.pause();
+  tv.setPaused(true);
+}
+function resume() {
+  if (!paused) return;
+  lag = now() - frozenAt;   // 从暂停处接着播
+  paused = false;
+  tv.setPaused(false);
+  const { i, t } = locate(schedule, vnow());
+  syncAudio(schedule.items[i], t);
+}
+function goLive() {
+  paused = false; lag = 0;  // 按服务器时钟重新定位到直播
+  tv.setPaused(false);
+  const { i, t } = locate(schedule, vnow());
+  if (on) syncAudio(schedule.items[i], t);
 }
 
 const tv = createTV(document.getElementById("root"), {
   onPower: () => {
     on = true;
     // 这次点击里起播，开机雪花盖住起播
-    const { i, t } = locate(schedule, now());
+    const { i, t } = locate(schedule, vnow());
     syncAudio(schedule.items[i], t);
   },
+  onScreenClick: () => (paused ? resume() : pause()),
+  onGoLive: goLive,
 });
 
+// 底部滚动条：接下来的几条
+function upcoming(i, k = 5) {
+  const n = schedule.items.length, out = [];
+  for (let j = 1; j <= Math.min(k, n - 1); j++) {
+    const it = schedule.items[(i + j) % n];
+    out.push({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source });
+  }
+  return out;
+}
+
 function frame() {
-  const n = now();
+  const n = vnow();
   const { i, t } = locate(schedule, n);
   const item = schedule.items[i];
-  if (on) syncAudio(item, t);
-  tv.render(item, t, n);
+  if (on && !paused) syncAudio(item, t);
+  // 暂停时画面定格；时钟仍走服务器时间
+  tv.render(item, t, now(), { mode: "live", upcoming: upcoming(i) });
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+window.__aitv.player = { pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; } };

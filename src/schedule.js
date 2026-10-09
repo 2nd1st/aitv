@@ -1,10 +1,18 @@
+// 原文（补料时读的页面正文）只用来提炼 brief，不进节目单：对外只留 brief + url。
+const PRIVATE_KEYS = ["materialText", "material", "lines", "briefError"];
+export function publicItem(it) {
+  const out = { ...it };
+  for (const k of PRIVATE_KEYS) delete out[k];
+  return out;
+}
+
 // 节目单：每条带绝对开始时间和时长，连续排、无空档；没有音频的条目直接跳过。
 export function buildSchedule(items, anchorMs) {
   let t = anchorMs;
   const out = [];
   for (const it of items) {
     if (!it.audio || !(it.duration > 0)) continue;
-    out.push({ ...it, start: t });
+    out.push({ ...publicItem(it), start: t });
     t += Math.round(it.duration * 1000);
   }
   return { anchor: anchorMs, total: t - anchorMs, items: out };

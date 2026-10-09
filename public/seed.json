@@ -2,40 +2,75 @@
  "anchorMs": 1760000000000,
  "items": [
   {
-   "id": "hn-50006832",
+   "id": "hn-50008427",
    "source": "Hacker News",
-   "url": "https://apnews.com/article/h1b-visa-program-vance-microsoft-e7b3a407f822702b269ee277d21343ea",
-   "fetchedAt": 1791505364969,
-   "publishedAt": 1791472500000,
+   "url": "https://cactuscompute.com/blog/whistle",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791478779000,
    "template": "number",
    "focus": "points",
    "fields": {
-    "title": "Trump administration is suspending Microsoft from a green card program",
+    "title": "Whistle: Speech to Text in 16.9 MB",
     "rank": 1,
-    "points": 809,
-    "comments": 1389
+    "points": 575,
+    "comments": 128,
+    "what": "它是个能装在手机上的开源语音识别模型，把录音直接转成文字和工具指令。",
+    "who": "做手机、穿戴设备、机器人和智能家居的开发者会关注它。",
+    "highlight": "体积小、跑得快，还能和同门模型共用引擎，边听边干活。",
+    "title_zh": "Whistle：仅 16.9 MB 的语音转文字"
    },
-   "audio": "/audio/hn-50006832.mp3",
-   "duration": 9.724,
-   "spoken": "Hacker News 热榜第 1 名：Trump administration is suspending Microsoft from a green card program。目前 809 分，1389 条评论。",
-   "rounds": [
+   "brief": {
+    "what": "它是个能装在手机上的开源语音识别模型，把录音直接转成文字和工具指令。",
+    "who": "做手机、穿戴设备、机器人和智能家居的开发者会关注它。",
+    "highlight": "体积小、跑得快，还能和同门模型共用引擎，边听边干活。"
+   },
+   "script": [
     {
-     "text": "Hacker News 热榜第 1 名：Trump administration is suspending Microsoft from a green card program。",
-     "start_time": 0,
-     "end_time": 5.266
+     "tpl": "有个新开源语音模型叫 Whistle，能把手机录音直接转成文字和工具指令。",
+     "text": "有个新开源语音模型叫 Whistle，能把手机录音直接转成文字和工具指令。",
+     "part": "what"
     },
     {
-     "text": "目前 809 分，1389 条评论。",
-     "start_time": 5.266,
-     "end_time": 8.988
+     "tpl": "做手机、穿戴设备、机器人和智能家居的开发者会用到它，因为体积小跑得快，还能跟同门模型共用引擎，边听边干活。",
+     "text": "做手机、穿戴设备、机器人和智能家居的开发者会用到它，因为体积小跑得快，还能跟同门模型共用引擎，边听边干活。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你正在做端侧语音交互，今天就可以去试试把它接进原型里，或者拿它跟你现在用的识别方案对比一下延迟和占用。",
+     "text": "如果你正在做端侧语音交互，今天就可以去试试把它接进原型里，或者拿它跟你现在用的识别方案对比一下延迟和占用。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/hn-50008427.mp3",
+   "duration": 19.712,
+   "spoken": "有个新开源语音模型叫 Whistle，能把手机录音直接转成文字和工具指令。做手机、穿戴设备、机器人和智能家居的开发者会用到它，因为体积小跑得快，还能跟同门模型共用引擎，边听边干活。如果你正在做端侧语音交互，今天就可以去试试把它接进原型里，或者拿它跟你现在用的识别方案对比一下延迟和占用。",
+   "rounds": [
+    {
+     "text": "有个新开源语音模型叫 Whistle，能把手机录音直接转成文字和工具指令。",
+     "start_time": 0,
+     "end_time": 4.877,
+     "part": "what"
+    },
+    {
+     "text": "做手机、穿戴设备、机器人和智能家居的开发者会用到它，因为体积小跑得快，还能跟同门模型共用引擎，边听边干活。",
+     "start_time": 4.877,
+     "end_time": 12.416,
+     "part": "who"
+    },
+    {
+     "text": "如果你正在做端侧语音交互，今天就可以去试试把它接进原型里，或者拿它跟你现在用的识别方案对比一下延迟和占用。",
+     "start_time": 12.416,
+     "end_time": 18.919,
+     "part": "take"
+    }
+   ],
+   "take": "如果你正在做端侧语音交互，今天就可以去试试把它接进原型里，或者拿它跟你现在用的识别方案对比一下延迟和占用。"
   },
   {
    "id": "gh-boykopovar/AnyPS5",
    "source": "GitHub Trending",
    "url": "https://github.com/boykopovar/AnyPS5",
-   "fetchedAt": 1791505364969,
+   "fetchedAt": 1791514076203,
    "publishedAt": null,
    "template": "number",
    "focus": "starsToday",
@@ -44,59 +79,127 @@
     "description": "Tool for automatic PS5 executables porting to Linux and Windows",
     "language": "C++",
     "rank": 1,
-    "stars": 15681,
-    "forks": 1236,
-    "starsToday": 4669
+    "stars": 16156,
+    "forks": 1280,
+    "starsToday": 4669,
+    "what": "把主机游戏的可执行文件转成电脑能直接跑的原生格式，不靠模拟器。",
+    "who": "想在电脑上玩主机游戏、又关心技术实现的研究者和玩家。",
+    "highlight": "转换后能原生运行，还有游戏已经跑得很流畅。"
    },
-   "audio": "/audio/gh-boykopovar-AnyPS5.mp3",
-   "duration": 9.532,
-   "spoken": "GitHub 今日趋势第 1 名：boykopovar / AnyPS5。今天新增 4669 颗星，累计 15681 颗星。",
-   "rounds": [
+   "brief": {
+    "what": "把主机游戏的可执行文件转成电脑能直接跑的原生格式，不靠模拟器。",
+    "who": "想在电脑上玩主机游戏、又关心技术实现的研究者和玩家。",
+    "highlight": "转换后能原生运行，还有游戏已经跑得很流畅。"
+   },
+   "script": [
     {
-     "text": "GitHub 今日趋势第 1 名：boykopovar / AnyPS5。",
-     "start_time": 0,
-     "end_time": 3.517
+     "tpl": "{{title}} 把主机游戏的可执行文件转成电脑能直接跑的原生格式，不靠模拟器。",
+     "text": "boykopovar / AnyPS5 把主机游戏的可执行文件转成电脑能直接跑的原生格式，不靠模拟器。",
+     "part": "what"
     },
     {
-     "text": "今天新增 4669 颗星，累计 15681 颗星。",
-     "start_time": 3.517,
-     "end_time": 8.807
+     "tpl": "想让电脑跑主机游戏、又关心技术实现的研究者和玩家，这个项目就是给你的。转换后能原生运行，有的游戏已经很流畅。",
+     "text": "想让电脑跑主机游戏、又关心技术实现的研究者和玩家，这个项目就是给你的。转换后能原生运行，有的游戏已经很流畅。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你正在做主机游戏到电脑的移植，今天就试试 {{title}} 的转换流程；如果你还在用模拟器，可以拿同款游戏对比原生运行的表现。",
+     "text": "如果你正在做主机游戏到电脑的移植，今天就试试 boykopovar / AnyPS5 的转换流程；如果你还在用模拟器，可以拿同款游戏对比原生运行的表现。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/gh-boykopovar-AnyPS5.mp3",
+   "duration": 25.591,
+   "spoken": "boykopovar / AnyPS5 把主机游戏的可执行文件转成电脑能直接跑的原生格式，不靠模拟器。想让电脑跑主机游戏、又关心技术实现的研究者和玩家，这个项目就是给你的。转换后能原生运行，有的游戏已经很流畅。如果你正在做主机游戏到电脑的移植，今天就试试 boykopovar / AnyPS5 的转换流程；如果你还在用模拟器，可以拿同款游戏对比原生运行的表现。",
+   "rounds": [
+    {
+     "text": "boykopovar / AnyPS5 把主机游戏的可执行文件转成电脑能直接跑的原生格式，不靠模拟器。",
+     "start_time": 0,
+     "end_time": 6.894,
+     "part": "what"
+    },
+    {
+     "text": "想让电脑跑主机游戏、又关心技术实现的研究者和玩家，这个项目就是给你的。转换后能原生运行，有的游戏已经很流畅。",
+     "start_time": 6.894,
+     "end_time": 14.476,
+     "part": "who"
+    },
+    {
+     "text": "如果你正在做主机游戏到电脑的移植，今天就试试 boykopovar / AnyPS5 的转换流程；如果你还在用模拟器，可以拿同款游戏对比原生运行的表现。",
+     "start_time": 14.476,
+     "end_time": 24.806,
+     "part": "take"
+    }
+   ],
+   "take": "如果你正在做主机游戏到电脑的移植，今天就试试 boykopovar / AnyPS5 的转换流程；如果你还在用模拟器，可以拿同款游戏对比原生运行的表现。"
   },
   {
-   "id": "ph-1272416",
+   "id": "ph-1271048",
    "source": "Product Hunt",
-   "url": "https://www.producthunt.com/products/typeling",
-   "fetchedAt": 1791505364969,
-   "publishedAt": 1791359458000,
+   "url": "https://www.producthunt.com/products/openswarm-3",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791242578000,
    "template": "title",
    "fields": {
-    "title": "Typeling",
-    "tagline": "Translate in your iPhone keyboard. Keep your tone.",
-    "rank": 1
+    "title": "OpenSwarm",
+    "tagline": "A swarm of agents, in the same place you work",
+    "rank": 1,
+    "what": "它是一款桌面应用，让成批智能体替你操作整台电脑干活。",
+    "who": "适合想同时推进多项任务、又不想开不少聊天窗口的人。",
+    "highlight": "每个智能体都是画布上的卡片，能随时看、随时叫停。"
    },
-   "audio": "/audio/ph-1272416.mp3",
-   "duration": 5.524,
-   "spoken": "Product Hunt 今日上新：Typeling。Translate in your iPhone keyboard. Keep your tone.",
-   "rounds": [
+   "brief": {
+    "what": "它是一款桌面应用，让成批智能体替你操作整台电脑干活。",
+    "who": "适合想同时推进多项任务、又不想开不少聊天窗口的人。",
+    "highlight": "每个智能体都是画布上的卡片，能随时看、随时叫停。"
+   },
+   "script": [
     {
-     "text": "Product Hunt 今日上新：Typeling。",
-     "start_time": 0,
-     "end_time": 2.326
+     "tpl": "OpenSwarm是一款桌面应用，让成批智能体替你操作整台电脑干活。智能体都是画布上的卡片，你随时能看到进度，也能随时叫停。",
+     "text": "OpenSwarm是一款桌面应用，让成批智能体替你操作整台电脑干活。智能体都是画布上的卡片，你随时能看到进度，也能随时叫停。",
+     "part": "what"
     },
     {
-     "text": "Translate in your iPhone keyboard. Keep your tone.",
-     "start_time": 2.326,
-     "end_time": 4.818
+     "tpl": "你要是手头同时推进多项任务，又不想来来回回切换聊天窗口，这工具就挺合适。你不用在不同对话窗口里来回切，所有智能体都在画布上盯着。",
+     "text": "你要是手头同时推进多项任务，又不想来来回回切换聊天窗口，这工具就挺合适。你不用在不同对话窗口里来回切，所有智能体都在画布上盯着。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你还在用聊天窗口指挥AI干活，今天就去下载OpenSwarm试试。把智能体都放到画布上，随时查看、随时叫停，管理起来更顺手。",
+     "text": "如果你还在用聊天窗口指挥AI干活，今天就去下载OpenSwarm试试。把智能体都放到画布上，随时查看、随时叫停，管理起来更顺手。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/ph-1271048.mp3",
+   "duration": 27.824,
+   "spoken": "OpenSwarm是一款桌面应用，让成批智能体替你操作整台电脑干活。智能体都是画布上的卡片，你随时能看到进度，也能随时叫停。你要是手头同时推进多项任务，又不想来来回回切换聊天窗口，这工具就挺合适。你不用在不同对话窗口里来回切，所有智能体都在画布上盯着。如果你还在用聊天窗口指挥AI干活，今天就去下载OpenSwarm试试。把智能体都放到画布上，随时查看、随时叫停，管理起来更顺手。",
+   "rounds": [
+    {
+     "text": "OpenSwarm是一款桌面应用，让成批智能体替你操作整台电脑干活。智能体都是画布上的卡片，你随时能看到进度，也能随时叫停。",
+     "start_time": 0,
+     "end_time": 9.177,
+     "part": "what"
+    },
+    {
+     "text": "你要是手头同时推进多项任务，又不想来来回回切换聊天窗口，这工具就挺合适。你不用在不同对话窗口里来回切，所有智能体都在画布上盯着。",
+     "start_time": 9.177,
+     "end_time": 18.366,
+     "part": "who"
+    },
+    {
+     "text": "如果你还在用聊天窗口指挥AI干活，今天就去下载OpenSwarm试试。把智能体都放到画布上，随时查看、随时叫停，管理起来更顺手。",
+     "start_time": 18.366,
+     "end_time": 27.038,
+     "part": "take"
+    }
+   ],
+   "take": "如果你还在用聊天窗口指挥AI干活，今天就去下载OpenSwarm试试。把智能体都放到画布上，随时查看、随时叫停，管理起来更顺手。"
   },
   {
    "id": "aihot-x8r8kta42au39pp06f02shk9f",
    "source": "AIHOT",
    "url": "https://www.anthropic.com/claude-sonnet-5-5",
-   "fetchedAt": 1791505364969,
+   "fetchedAt": 1791514076203,
    "publishedAt": 1791489850000,
    "template": "number",
    "focus": "sourceCount",
@@ -105,60 +208,129 @@
     "origin": "Anthropic：Newsroom（网页）",
     "rank": 1,
     "sourceCount": 13,
-    "discussions": 66,
-    "permalink": "https://aihot.news/items/x8r8kta42au39pp06f02shk9f"
+    "discussions": 67,
+    "permalink": "https://aihot.news/items/x8r8kta42au39pp06f02shk9f",
+    "what": "它是一款更快更省的新模型，日常活儿干得利索",
+    "who": "给做开发、写文档做表格的人用",
+    "highlight": "跑得更快，干同样的活花费还更少"
    },
-   "audio": "/audio/aihot-x8r8kta42au39pp06f02shk9f.mp3",
-   "duration": 10.564,
-   "spoken": "AI 热点第 1 名：Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价。被 13 个来源报道，66 条讨论。",
-   "rounds": [
+   "brief": {
+    "what": "它是一款更快更省的新模型，日常活儿干得利索",
+    "who": "给做开发、写文档做表格的人用",
+    "highlight": "跑得更快，干同样的活花费还更少"
+   },
+   "script": [
     {
-     "text": "AI 热点第 1 名：Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价。",
-     "start_time": 0,
-     "end_time": 6.608
+     "tpl": "Anthropic 推了一款新模型，干活更快，同样的活儿花费还更少，日常写代码、做文档都很利索。",
+     "text": "Anthropic 推了一款新模型，干活更快，同样的活儿花费还更少，日常写代码、做文档都很利索。",
+     "part": "what"
     },
     {
-     "text": "被 13 个来源报道，66 条讨论。",
-     "start_time": 6.608,
-     "end_time": 9.838
+     "tpl": "做开发、写文档、做表格的朋友，用它能省下不少时间和成本。",
+     "text": "做开发、写文档、做表格的朋友，用它能省下不少时间和成本。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你手头有这类活儿，今天就可以拿它跟你现在用的工具对比一下，看看是不是更顺手。",
+     "text": "如果你手头有这类活儿，今天就可以拿它跟你现在用的工具对比一下，看看是不是更顺手。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/aihot-x8r8kta42au39pp06f02shk9f.mp3",
+   "duration": 14.839,
+   "spoken": "Anthropic 推了一款新模型，干活更快，同样的活儿花费还更少，日常写代码、做文档都很利索。做开发、写文档、做表格的朋友，用它能省下不少时间和成本。如果你手头有这类活儿，今天就可以拿它跟你现在用的工具对比一下，看看是不是更顺手。",
+   "rounds": [
+    {
+     "text": "Anthropic 推了一款新模型，干活更快，同样的活儿花费还更少，日常写代码、做文档都很利索。",
+     "start_time": 0,
+     "end_time": 6.156,
+     "part": "what"
+    },
+    {
+     "text": "做开发、写文档、做表格的朋友，用它能省下不少时间和成本。",
+     "start_time": 6.156,
+     "end_time": 9.616,
+     "part": "who"
+    },
+    {
+     "text": "如果你手头有这类活儿，今天就可以拿它跟你现在用的工具对比一下，看看是不是更顺手。",
+     "start_time": 9.616,
+     "end_time": 14.032,
+     "part": "take"
+    }
+   ],
+   "take": "如果你手头有这类活儿，今天就可以拿它跟你现在用的工具对比一下，看看是不是更顺手。"
   },
   {
-   "id": "hn-50008427",
+   "id": "hn-49995495",
    "source": "Hacker News",
-   "url": "https://cactuscompute.com/blog/whistle",
-   "fetchedAt": 1791505364969,
-   "publishedAt": 1791478779000,
+   "url": "https://www.dexerto.com/entertainment/man-discovers-his-parents-coffee-machine-used-1tb-of-data-in-10-days-3416399/",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791392190000,
    "template": "number",
    "focus": "points",
    "fields": {
-    "title": "Whistle: Speech to Text in 16.9 MB",
+    "title": "Man discovers his parents' coffee machine used 1TB of data in 10 days",
     "rank": 2,
-    "points": 484,
-    "comments": 112
+    "points": 456,
+    "comments": 287,
+    "what": "他查家里网络，发现父母的智能咖啡机在短时间内传了超大流量，远超预期。",
+    "who": "给关心智能家居和网络安全的普通用户，尤其是帮长辈管网络的人。",
+    "highlight": "流量大多没出家门，疑似设备故障，却把家里的无线网络给压垮了。",
+    "title_zh": "男子发现父母的咖啡机10天用了1TB数据"
    },
-   "audio": "/audio/hn-50008427.mp3",
-   "duration": 7.756,
-   "spoken": "Hacker News 热榜第 2 名：Whistle: Speech to Text in 16.9 MB。目前 484 分，112 条评论。",
-   "rounds": [
+   "brief": {
+    "what": "他查家里网络，发现父母的智能咖啡机在短时间内传了超大流量，远超预期。",
+    "who": "给关心智能家居和网络安全的普通用户，尤其是帮长辈管网络的人。",
+    "highlight": "流量大多没出家门，疑似设备故障，却把家里的无线网络给压垮了。"
+   },
+   "script": [
     {
-     "text": "Hacker News 热榜第 2 名：Whistle: Speech to Text in 16.9 MB。",
-     "start_time": 0,
-     "end_time": 4.2
+     "tpl": "有人查了下家里网络，发现爸妈那台智能咖啡机在很短时间里传出了吓人的流量。这机器本身不复杂，就是把冲咖啡的功能连了网。",
+     "text": "有人查了下家里网络，发现爸妈那台智能咖啡机在很短时间里传出了吓人的流量。这机器本身不复杂，就是把冲咖啡的功能连了网。",
+     "part": "what"
     },
     {
-     "text": "目前 484 分，112 条评论。",
-     "start_time": 4.2,
-     "end_time": 7.031
+     "tpl": "如果你也帮长辈管过无线网，或者家里买过能联网的小家电，这种情况离你并不远。设备偷偷跑流量，往往等网络卡了才被发现。",
+     "text": "如果你也帮长辈管过无线网，或者家里买过能联网的小家电，这种情况离你并不远。设备偷偷跑流量，往往等网络卡了才被发现。",
+     "part": "who"
+    },
+    {
+     "tpl": "今天就去路由器后台查看各设备的流量，不常用的直接限速或隔到访客网络，别让咖啡机拖垮全家网络。",
+     "text": "今天就去路由器后台查看各设备的流量，不常用的直接限速或隔到访客网络，别让咖啡机拖垮全家网络。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/hn-49995495.mp3",
+   "duration": 25.591,
+   "spoken": "有人查了下家里网络，发现爸妈那台智能咖啡机在很短时间里传出了吓人的流量。这机器本身不复杂，就是把冲咖啡的功能连了网。如果你也帮长辈管过无线网，或者家里买过能联网的小家电，这种情况离你并不远。设备偷偷跑流量，往往等网络卡了才被发现。今天就去路由器后台查看各设备的流量，不常用的直接限速或隔到访客网络，别让咖啡机拖垮全家网络。",
+   "rounds": [
+    {
+     "text": "有人查了下家里网络，发现爸妈那台智能咖啡机在很短时间里传出了吓人的流量。这机器本身不复杂，就是把冲咖啡的功能连了网。",
+     "start_time": 0,
+     "end_time": 8.947,
+     "part": "what"
+    },
+    {
+     "text": "如果你也帮长辈管过无线网，或者家里买过能联网的小家电，这种情况离你并不远。设备偷偷跑流量，往往等网络卡了才被发现。",
+     "start_time": 8.947,
+     "end_time": 17.699,
+     "part": "who"
+    },
+    {
+     "text": "今天就去路由器后台查看各设备的流量，不常用的直接限速或隔到访客网络，别让咖啡机拖垮全家网络。",
+     "start_time": 17.699,
+     "end_time": 24.817,
+     "part": "take"
+    }
+   ],
+   "take": "今天就去路由器后台查看各设备的流量，不常用的直接限速或隔到访客网络，别让咖啡机拖垮全家网络。"
   },
   {
    "id": "gh-cathrynlavery/diagram-design",
    "source": "GitHub Trending",
    "url": "https://github.com/cathrynlavery/diagram-design",
-   "fetchedAt": 1791505364969,
+   "fetchedAt": 1791514076203,
    "publishedAt": null,
    "template": "number",
    "focus": "starsToday",
@@ -167,59 +339,127 @@
     "description": "Editorial diagram design for Claude Code, Codex, GitHub Copilot, Factory Droid, and Pi. 42 diagram types. Self-contained HTML + SVG. No shadows. No Mermaid slop.",
     "language": "HTML",
     "rank": 2,
-    "stars": 46315,
-    "forks": 2947,
-    "starsToday": 1160
+    "stars": 46527,
+    "forks": 2955,
+    "starsToday": 1160,
+    "what": "它是一款给 AI 编程助手用的图表技能，能生成编辑级质量的静态图表。",
+    "who": "给写文章、做产品、讲架构的人用，省去在绘图软件里反复调样式。",
+    "highlight": "图表样式贴合你的品牌，还能把别的工具画的图重新绘制成统一风格。"
    },
-   "audio": "/audio/gh-cathrynlavery-diagram-design.mp3",
-   "duration": 8.74,
-   "spoken": "GitHub 今日趋势第 2 名：cathrynlavery / diagram-design。今天新增 1160 颗星，累计 46315 颗星。",
-   "rounds": [
+   "brief": {
+    "what": "它是一款给 AI 编程助手用的图表技能，能生成编辑级质量的静态图表。",
+    "who": "给写文章、做产品、讲架构的人用，省去在绘图软件里反复调样式。",
+    "highlight": "图表样式贴合你的品牌，还能把别的工具画的图重新绘制成统一风格。"
+   },
+   "script": [
     {
-     "text": "GitHub 今日趋势第 2 名：cathrynlavery / diagram-design。",
-     "start_time": 0,
-     "end_time": 3.253
+     "tpl": "GitHub 上有个叫 {{title}} 的项目，它是一款给 AI 编程助手用的图表技能，能生成编辑级质量的静态图表。",
+     "text": "GitHub 上有个叫 cathrynlavery / diagram-design 的项目，它是一款给 AI 编程助手用的图表技能，能生成编辑级质量的静态图表。",
+     "part": "what"
     },
     {
-     "text": "今天新增 1160 颗星，累计 46315 颗星。",
-     "start_time": 3.253,
-     "end_time": 8.008
+     "tpl": "如果你在写文章、做产品或讲架构，它会帮你省去在绘图软件里反复调样式的麻烦，生成的图表还能贴合你的品牌风格。",
+     "text": "如果你在写文章、做产品或讲架构，它会帮你省去在绘图软件里反复调样式的麻烦，生成的图表还能贴合你的品牌风格。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你还在用别的绘图工具，今天就去试试它，把旧图重新绘制成统一风格。",
+     "text": "如果你还在用别的绘图工具，今天就去试试它，把旧图重新绘制成统一风格。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/gh-cathrynlavery-diagram-design.mp3",
+   "duration": 23.696,
+   "spoken": "GitHub 上有个叫 cathrynlavery / diagram-design 的项目，它是一款给 AI 编程助手用的图表技能，能生成编辑级质量的静态图表。如果你在写文章、做产品或讲架构，它会帮你省去在绘图软件里反复调样式的麻烦，生成的图表还能贴合你的品牌风格。如果你还在用别的绘图工具，今天就去试试它，把旧图重新绘制成统一风格。",
+   "rounds": [
+    {
+     "text": "GitHub 上有个叫 cathrynlavery / diagram-design 的项目，它是一款给 AI 编程助手用的图表技能，能生成编辑级质量的静态图表。",
+     "start_time": 0,
+     "end_time": 9.879,
+     "part": "what"
+    },
+    {
+     "text": "如果你在写文章、做产品或讲架构，它会帮你省去在绘图软件里反复调样式的麻烦，生成的图表还能贴合你的品牌风格。",
+     "start_time": 9.879,
+     "end_time": 17.853,
+     "part": "who"
+    },
+    {
+     "text": "如果你还在用别的绘图工具，今天就去试试它，把旧图重新绘制成统一风格。",
+     "start_time": 17.853,
+     "end_time": 22.896,
+     "part": "take"
+    }
+   ],
+   "take": "如果你还在用别的绘图工具，今天就去试试它，把旧图重新绘制成统一风格。"
   },
   {
-   "id": "ph-1273018",
+   "id": "ph-1271901",
    "source": "Product Hunt",
-   "url": "https://www.producthunt.com/products/aegis-14",
-   "fetchedAt": 1791505364969,
-   "publishedAt": 1791398030000,
+   "url": "https://www.producthunt.com/products/vocera",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791308380000,
    "template": "title",
    "fields": {
-    "title": "aegis",
-    "tagline": "Smart personal safety app connected to 24/7 dispatch",
-    "rank": 2
+    "title": "Cekura Bench",
+    "tagline": "Speech-to-speech model benchmarks on live phone calls",
+    "rank": 3,
+    "what": "它给语音和聊天 AI 智能体做自动化质检，从上线前模拟评测到线上通话监控都能覆盖。",
+    "who": "做对话式 AI 的团队，尤其是要保证语音智能体质量的人。",
+    "highlight": "把真实通话的评测结果和通话记录都公开出来，方便自己核对。"
    },
-   "audio": "/audio/ph-1273018.mp3",
-   "duration": 6.1,
-   "spoken": "Product Hunt 今日上新：aegis。Smart personal safety app connected to 24/7 dispatch",
-   "rounds": [
+   "brief": {
+    "what": "它给语音和聊天 AI 智能体做自动化质检，从上线前模拟评测到线上通话监控都能覆盖。",
+    "who": "做对话式 AI 的团队，尤其是要保证语音智能体质量的人。",
+    "highlight": "把真实通话的评测结果和通话记录都公开出来，方便自己核对。"
+   },
+   "script": [
     {
-     "text": "Product Hunt 今日上新：aegis。",
-     "start_time": 0,
-     "end_time": 1.824
+     "tpl": "{{title}} 是一款给语音和聊天 AI 智能体做自动化质检的工具，从上线前模拟评测到线上通话监控都能覆盖。",
+     "text": "Cekura Bench 是一款给语音和聊天 AI 智能体做自动化质检的工具，从上线前模拟评测到线上通话监控都能覆盖。",
+     "part": "what"
     },
     {
-     "text": "Smart personal safety app connected to 24/7 dispatch",
-     "start_time": 1.824,
-     "end_time": 5.363
+     "tpl": "做对话式 AI 的团队会用到它，尤其是要保证语音智能体质量的人。它把真实通话的评测结果和通话记录都公开出来，方便你自己核对。",
+     "text": "做对话式 AI 的团队会用到它，尤其是要保证语音智能体质量的人。它把真实通话的评测结果和通话记录都公开出来，方便你自己核对。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你在做语音 AI 智能体，今天就拿 {{title}} 和现在的人工抽检对比一下。",
+     "text": "如果你在做语音 AI 智能体，今天就拿 Cekura Bench 和现在的人工抽检对比一下。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/ph-1271901.mp3",
+   "duration": 21.92,
+   "spoken": "Cekura Bench 是一款给语音和聊天 AI 智能体做自动化质检的工具，从上线前模拟评测到线上通话监控都能覆盖。做对话式 AI 的团队会用到它，尤其是要保证语音智能体质量的人。它把真实通话的评测结果和通话记录都公开出来，方便你自己核对。如果你在做语音 AI 智能体，今天就拿 Cekura Bench 和现在的人工抽检对比一下。",
+   "rounds": [
+    {
+     "text": "Cekura Bench 是一款给语音和聊天 AI 智能体做自动化质检的工具，从上线前模拟评测到线上通话监控都能覆盖。",
+     "start_time": 0,
+     "end_time": 8.246,
+     "part": "what"
+    },
+    {
+     "text": "做对话式 AI 的团队会用到它，尤其是要保证语音智能体质量的人。它把真实通话的评测结果和通话记录都公开出来，方便你自己核对。",
+     "start_time": 8.246,
+     "end_time": 16.92,
+     "part": "who"
+    },
+    {
+     "text": "如果你在做语音 AI 智能体，今天就拿 Cekura Bench 和现在的人工抽检对比一下。",
+     "start_time": 16.92,
+     "end_time": 21.122,
+     "part": "take"
+    }
+   ],
+   "take": "如果你在做语音 AI 智能体，今天就拿 Cekura Bench 和现在的人工抽检对比一下。"
   },
   {
    "id": "aihot-uir31g728myjry383z17txvrw",
    "source": "AIHOT",
    "url": "https://openai.com/index/gpt-6-for-everyone/",
-   "fetchedAt": 1791505364969,
+   "fetchedAt": 1791514076203,
    "publishedAt": 1791426163000,
    "template": "number",
    "focus": "sourceCount",
@@ -228,60 +468,129 @@
     "origin": "OpenAI：官网动态（RSS · 排除企业/客户案例）",
     "rank": 2,
     "sourceCount": 10,
-    "discussions": 35,
-    "permalink": "https://aihot.news/items/uir31g728myjry383z17txvrw"
+    "discussions": 36,
+    "permalink": "https://aihot.news/items/uir31g728myjry383z17txvrw",
+    "what": "它给聊天助手换了套会画图、能点、可填表的交互界面来回答问题。",
+    "who": "所有用聊天助手的人，尤其爱拿它学东西、做计划、算账的普通用户。",
+    "highlight": "回答不再只是文字，能直接生成图表、按钮和表单，边聊边用。"
    },
-   "audio": "/audio/aihot-uir31g728myjry383z17txvrw.mp3",
-   "duration": 8.812,
-   "spoken": "AI 热点第 2 名：OpenAI向ChatGPT全量用户开放GPT-6与Intelligent UI。被 10 个来源报道，35 条讨论。",
-   "rounds": [
+   "brief": {
+    "what": "它给聊天助手换了套会画图、能点、可填表的交互界面来回答问题。",
+    "who": "所有用聊天助手的人，尤其爱拿它学东西、做计划、算账的普通用户。",
+    "highlight": "回答不再只是文字，能直接生成图表、按钮和表单，边聊边用。"
+   },
+   "script": [
     {
-     "text": "AI 热点第 2 名：OpenAI向ChatGPT全量用户开放GPT-6与Intelligent UI。",
-     "start_time": 0,
-     "end_time": 5.785
+     "tpl": "OpenAI给ChatGPT换了个新界面，除了文字回复，还能直接画图、出按钮、给可填的表格，边聊边操作。",
+     "text": "OpenAI给ChatGPT换了个新界面，除了文字回复，还能直接画图、出按钮、给可填的表格，边聊边操作。",
+     "part": "what"
     },
     {
-     "text": "被 10 个来源报道，35 条讨论。",
-     "start_time": 5.785,
-     "end_time": 8.072
+     "tpl": "你要是常用它查资料、做计划或者算账，这个新界面能让你直接看到图表和能点的按钮，不用自己再动手整理。",
+     "text": "你要是常用它查资料、做计划或者算账，这个新界面能让你直接看到图表和能点的按钮，不用自己再动手整理。",
+     "part": "who"
+    },
+    {
+     "tpl": "你现在就可以打开聊天助手，问个要算账或做计划的问题，看它是不是直接回了图表和表格。",
+     "text": "你现在就可以打开聊天助手，问个要算账或做计划的问题，看它是不是直接回了图表和表格。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/aihot-uir31g728myjry383z17txvrw.mp3",
+   "duration": 20.264,
+   "spoken": "OpenAI给ChatGPT换了个新界面，除了文字回复，还能直接画图、出按钮、给可填的表格，边聊边操作。你要是常用它查资料、做计划或者算账，这个新界面能让你直接看到图表和能点的按钮，不用自己再动手整理。你现在就可以打开聊天助手，问个要算账或做计划的问题，看它是不是直接回了图表和表格。",
+   "rounds": [
+    {
+     "text": "OpenAI给ChatGPT换了个新界面，除了文字回复，还能直接画图、出按钮、给可填的表格，边聊边操作。",
+     "start_time": 0,
+     "end_time": 7.32,
+     "part": "what"
+    },
+    {
+     "text": "你要是常用它查资料、做计划或者算账，这个新界面能让你直接看到图表和能点的按钮，不用自己再动手整理。",
+     "start_time": 7.32,
+     "end_time": 14.1,
+     "part": "who"
+    },
+    {
+     "text": "你现在就可以打开聊天助手，问个要算账或做计划的问题，看它是不是直接回了图表和表格。",
+     "start_time": 14.1,
+     "end_time": 19.493,
+     "part": "take"
+    }
+   ],
+   "take": "你现在就可以打开聊天助手，问个要算账或做计划的问题，看它是不是直接回了图表和表格。"
   },
   {
    "id": "hn-50000488",
    "source": "Hacker News",
    "url": "https://www.dgt.is/blog/2026-10-07-deepseek-freek-out/",
-   "fetchedAt": 1791505364969,
+   "fetchedAt": 1791514076203,
    "publishedAt": 1791418488000,
    "template": "number",
    "focus": "points",
    "fields": {
     "title": "Why isn't the industry freaking out about DeepSeek 4.1 Flash?",
     "rank": 3,
-    "points": 352,
-    "comments": 305
+    "points": 455,
+    "comments": 389,
+    "what": "它是一款能力接近顶级模型、但便宜得多的国产大模型，能扛住日常高强度开发。",
+    "who": "给预算有限、又想用上强模型的开发者和做长期规划的人。",
+    "highlight": "它把长会话的缓存成本大幅压下来，整天用也花不了多少。",
+    "title_zh": "为什么业界不为 DeepSeek 4.1 Flash 疯狂？"
    },
-   "audio": "/audio/hn-50000488.mp3",
-   "duration": 8.692,
-   "spoken": "Hacker News 热榜第 3 名：Why isn't the industry freaking out about DeepSeek 4.1 Flash?。目前 352 分，305 条评论。",
-   "rounds": [
+   "brief": {
+    "what": "它是一款能力接近顶级模型、但便宜得多的国产大模型，能扛住日常高强度开发。",
+    "who": "给预算有限、又想用上强模型的开发者和做长期规划的人。",
+    "highlight": "它把长会话的缓存成本大幅压下来，整天用也花不了多少。"
+   },
+   "script": [
     {
-     "text": "Hacker News 热榜第 3 名：Why isn't the industry freaking out about DeepSeek 4.1 Flash?。",
-     "start_time": 0,
-     "end_time": 5.767
+     "tpl": "DeepSeek 新出的 Flash 模型，能力接近顶级，价格低很多。它扛得住日常高强度开发。",
+     "text": "DeepSeek 新出的 Flash 模型，能力接近顶级，价格低很多。它扛得住日常高强度开发。",
+     "part": "what"
     },
     {
-     "text": "目前 352 分，305 条评论。",
-     "start_time": 5.767,
-     "end_time": 7.971
+     "tpl": "预算有限又想用强模型的开发者，或者做长期规划的人，都能拿它当主力。不用为性能不够发愁。",
+     "text": "预算有限又想用强模型的开发者，或者做长期规划的人，都能拿它当主力。不用为性能不够发愁。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你在做长会话应用，今天就去试一下它的缓存成本。跟现在用的模型对照一下，看能省下多少。",
+     "text": "如果你在做长会话应用，今天就去试一下它的缓存成本。跟现在用的模型对照一下，看能省下多少。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/hn-50000488.mp3",
+   "duration": 19.712,
+   "spoken": "DeepSeek 新出的 Flash 模型，能力接近顶级，价格低很多。它扛得住日常高强度开发。预算有限又想用强模型的开发者，或者做长期规划的人，都能拿它当主力。不用为性能不够发愁。如果你在做长会话应用，今天就去试一下它的缓存成本。跟现在用的模型对照一下，看能省下多少。",
+   "rounds": [
+    {
+     "text": "DeepSeek 新出的 Flash 模型，能力接近顶级，价格低很多。它扛得住日常高强度开发。",
+     "start_time": 0,
+     "end_time": 6.75,
+     "part": "what"
+    },
+    {
+     "text": "预算有限又想用强模型的开发者，或者做长期规划的人，都能拿它当主力。不用为性能不够发愁。",
+     "start_time": 6.75,
+     "end_time": 12.483,
+     "part": "who"
+    },
+    {
+     "text": "如果你在做长会话应用，今天就去试一下它的缓存成本。跟现在用的模型对照一下，看能省下多少。",
+     "start_time": 12.483,
+     "end_time": 18.918,
+     "part": "take"
+    }
+   ],
+   "take": "如果你在做长会话应用，今天就去试一下它的缓存成本。跟现在用的模型对照一下，看能省下多少。"
   },
   {
    "id": "gh-morluto/rea",
    "source": "GitHub Trending",
    "url": "https://github.com/morluto/rea",
-   "fetchedAt": 1791505364969,
+   "fetchedAt": 1791514076203,
    "publishedAt": null,
    "template": "number",
    "focus": "starsToday",
@@ -290,25 +599,707 @@
     "description": "Reverse engineer anything with agents, from app behavior down to native binaries.",
     "language": "TypeScript",
     "rank": 3,
-    "stars": 26099,
-    "forks": 2937,
-    "starsToday": 7738
+    "stars": 28091,
+    "forks": 3244,
+    "starsToday": 7738,
+    "what": "它是个给 AI 助手用的逆向工程工具，能拆开软件看功能怎么实现。",
+    "who": "想抄别人功能、又拿不到源码的开发者和产品团队。",
+    "highlight": "分析在本地跑，结论还附上证据和局限，不是瞎猜。"
    },
-   "audio": "/audio/gh-morluto-rea.mp3",
-   "duration": 7.972,
-   "spoken": "GitHub 今日趋势第 3 名：morluto / rea。今天新增 7738 颗星，累计 26099 颗星。",
-   "rounds": [
+   "brief": {
+    "what": "它是个给 AI 助手用的逆向工程工具，能拆开软件看功能怎么实现。",
+    "who": "想抄别人功能、又拿不到源码的开发者和产品团队。",
+    "highlight": "分析在本地跑，结论还附上证据和局限，不是瞎猜。"
+   },
+   "script": [
     {
-     "text": "GitHub 今日趋势第 3 名：morluto / rea。",
-     "start_time": 0,
-     "end_time": 2.743
+     "tpl": "今天介绍个叫 morluto / rea 的工具，它是给 AI 助手用的逆向工程工具，能把软件拆开，看功能到底怎么实现。",
+     "text": "今天介绍个叫 morluto / rea 的工具，它是给 AI 助手用的逆向工程工具，能把软件拆开，看功能到底怎么实现。",
+     "part": "what"
     },
     {
-     "text": "今天新增 7738 颗星，累计 26099 颗星。",
-     "start_time": 2.743,
-     "end_time": 7.253
+     "tpl": "如果你是开发者或产品团队，想抄别人功能又没源码，可以试试它。分析在本地跑，结论附证据和局限，不是瞎猜。",
+     "text": "如果你是开发者或产品团队，想抄别人功能又没源码，可以试试它。分析在本地跑，结论附证据和局限，不是瞎猜。",
+     "part": "who"
+    },
+    {
+     "tpl": "所以，如果你正在做软件逆向或竞品分析，今天就去把它跑起来，看它怎么拆解你要研究的目标。",
+     "text": "所以，如果你正在做软件逆向或竞品分析，今天就去把它跑起来，看它怎么拆解你要研究的目标。",
+     "part": "take"
     }
-   ]
+   ],
+   "audio": "/audio/gh-morluto-rea.mp3",
+   "duration": 23.24,
+   "spoken": "今天介绍个叫 morluto / rea 的工具，它是给 AI 助手用的逆向工程工具，能把软件拆开，看功能到底怎么实现。如果你是开发者或产品团队，想抄别人功能又没源码，可以试试它。分析在本地跑，结论附证据和局限，不是瞎猜。所以，如果你正在做软件逆向或竞品分析，今天就去把它跑起来，看它怎么拆解你要研究的目标。",
+   "rounds": [
+    {
+     "text": "今天介绍个叫 morluto / rea 的工具，它是给 AI 助手用的逆向工程工具，能把软件拆开，看功能到底怎么实现。",
+     "start_time": 0,
+     "end_time": 8.016,
+     "part": "what"
+    },
+    {
+     "text": "如果你是开发者或产品团队，想抄别人功能又没源码，可以试试它。分析在本地跑，结论附证据和局限，不是瞎猜。",
+     "start_time": 8.016,
+     "end_time": 15.911,
+     "part": "who"
+    },
+    {
+     "text": "所以，如果你正在做软件逆向或竞品分析，今天就去把它跑起来，看它怎么拆解你要研究的目标。",
+     "start_time": 15.911,
+     "end_time": 22.442,
+     "part": "take"
+    }
+   ],
+   "take": "所以，如果你正在做软件逆向或竞品分析，今天就去把它跑起来，看它怎么拆解你要研究的目标。"
+  },
+  {
+   "id": "ph-1265368",
+   "source": "Product Hunt",
+   "url": "https://www.producthunt.com/products/drunken-penguins",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1790753897000,
+   "template": "title",
+   "fields": {
+    "title": "Drunken Penguins",
+    "tagline": "Party card games on everyone's phone. No app.",
+    "rank": 2,
+    "what": "它是一款不用装应用、扫码就能玩的派对卡牌游戏",
+    "who": "适合聚会时想一起玩牌、又懒得传手机的人",
+    "highlight": "投票保密、结果实时揭晓，还能免费拉朋友加入"
+   },
+   "brief": {
+    "what": "它是一款不用装应用、扫码就能玩的派对卡牌游戏",
+    "who": "适合聚会时想一起玩牌、又懒得传手机的人",
+    "highlight": "投票保密、结果实时揭晓，还能免费拉朋友加入"
+   },
+   "script": [
+    {
+     "tpl": "有一个叫 {{title}} 的派对卡牌游戏，完全不用装应用，拿手机扫码就能马上开玩。",
+     "text": "有一个叫 Drunken Penguins 的派对卡牌游戏，完全不用装应用，拿手机扫码就能马上开玩。",
+     "part": "what"
+    },
+    {
+     "tpl": "它特别适合聚会时想一起玩牌、又懒得传手机的人。投票过程保密，结果实时揭晓，还能免费拉朋友加入。",
+     "text": "它特别适合聚会时想一起玩牌、又懒得传手机的人。投票过程保密，结果实时揭晓，还能免费拉朋友加入。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你正好要组织聚会，今天就可以拿这个扫码直接开玩试试。不用下载任何东西。",
+     "text": "如果你正好要组织聚会，今天就可以拿这个扫码直接开玩试试。不用下载任何东西。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/ph-1265368.mp3",
+   "duration": 18.944,
+   "spoken": "有一个叫 Drunken Penguins 的派对卡牌游戏，完全不用装应用，拿手机扫码就能马上开玩。它特别适合聚会时想一起玩牌、又懒得传手机的人。投票过程保密，结果实时揭晓，还能免费拉朋友加入。如果你正好要组织聚会，今天就可以拿这个扫码直接开玩试试。不用下载任何东西。",
+   "rounds": [
+    {
+     "text": "有一个叫 Drunken Penguins 的派对卡牌游戏，完全不用装应用，拿手机扫码就能马上开玩。",
+     "start_time": 0,
+     "end_time": 5.837,
+     "part": "what"
+    },
+    {
+     "text": "它特别适合聚会时想一起玩牌、又懒得传手机的人。投票过程保密，结果实时揭晓，还能免费拉朋友加入。",
+     "start_time": 5.837,
+     "end_time": 12.742,
+     "part": "who"
+    },
+    {
+     "text": "如果你正好要组织聚会，今天就可以拿这个扫码直接开玩试试。不用下载任何东西。",
+     "start_time": 12.742,
+     "end_time": 18.162,
+     "part": "take"
+    }
+   ],
+   "take": "如果你正好要组织聚会，今天就可以拿这个扫码直接开玩试试。不用下载任何东西。"
+  },
+  {
+   "id": "aihot-at5dvel8balkaba9wrggcrqoj",
+   "source": "AIHOT",
+   "url": "https://www.anthropic.com/news/2026-usage-policy-update",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791510950000,
+   "template": "number",
+   "focus": "sourceCount",
+   "fields": {
+    "title": "Anthropic 新政策首次禁止虐待模型",
+    "origin": "Anthropic：Newsroom（网页）",
+    "rank": 3,
+    "sourceCount": 6,
+    "discussions": 13,
+    "permalink": "https://aihot.news/items/at5dvel8balkaba9wrggcrqoj",
+    "what": "它更新了使用政策，新增禁止虐待模型，并细化了欺骗活动、选举、武器、监控等规则。",
+    "who": "用它的开发者、企业和关注 AI 合规的人今天会在意。",
+    "highlight": "它头回把虐待模型写进禁止条款，还要求高风险场景有人把关。"
+   },
+   "brief": {
+    "what": "它更新了使用政策，新增禁止虐待模型，并细化了欺骗活动、选举、武器、监控等规则。",
+    "who": "用它的开发者、企业和关注 AI 合规的人今天会在意。",
+    "highlight": "它头回把虐待模型写进禁止条款，还要求高风险场景有人把关。"
+   },
+   "script": [
+    {
+     "tpl": "Anthropic更新了使用政策，新增禁止虐待模型，还细化了欺骗活动、选举、武器、监控这些规则。",
+     "text": "Anthropic更新了使用政策，新增禁止虐待模型，还细化了欺骗活动、选举、武器、监控这些规则。",
+     "part": "what"
+    },
+    {
+     "tpl": "如果你是用它的开发者、企业或者关心AI合规的人，今天会特别注意，因为以后接入这些模型得照着新规矩来，高风险场景还得安排人把关。",
+     "text": "如果你是用它的开发者、企业或者关心AI合规的人，今天会特别注意，因为以后接入这些模型得照着新规矩来，高风险场景还得安排人把关。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你正在用Anthropic的模型做产品，今天就打开它的使用政策，对照一下自己的应用有没有碰线，尤其是涉及敏感场景的。",
+     "text": "如果你正在用Anthropic的模型做产品，今天就打开它的使用政策，对照一下自己的应用有没有碰线，尤其是涉及敏感场景的。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/aihot-at5dvel8balkaba9wrggcrqoj.mp3",
+   "duration": 24.92,
+   "spoken": "Anthropic更新了使用政策，新增禁止虐待模型，还细化了欺骗活动、选举、武器、监控这些规则。如果你是用它的开发者、企业或者关心AI合规的人，今天会特别注意，因为以后接入这些模型得照着新规矩来，高风险场景还得安排人把关。如果你正在用Anthropic的模型做产品，今天就打开它的使用政策，对照一下自己的应用有没有碰线，尤其是涉及敏感场景的。",
+   "rounds": [
+    {
+     "text": "Anthropic更新了使用政策，新增禁止虐待模型，还细化了欺骗活动、选举、武器、监控这些规则。",
+     "start_time": 0,
+     "end_time": 7.296,
+     "part": "what"
+    },
+    {
+     "text": "如果你是用它的开发者、企业或者关心AI合规的人，今天会特别注意，因为以后接入这些模型得照着新规矩来，高风险场景还得安排人把关。",
+     "start_time": 7.296,
+     "end_time": 16.973,
+     "part": "who"
+    },
+    {
+     "text": "如果你正在用Anthropic的模型做产品，今天就打开它的使用政策，对照一下自己的应用有没有碰线，尤其是涉及敏感场景的。",
+     "start_time": 16.973,
+     "end_time": 24.138,
+     "part": "take"
+    }
+   ],
+   "take": "如果你正在用Anthropic的模型做产品，今天就打开它的使用政策，对照一下自己的应用有没有碰线，尤其是涉及敏感场景的。"
+  },
+  {
+   "id": "hn-49986882",
+   "source": "Hacker News",
+   "url": "https://antonfrolov.substack.com/p/i-hired-an-illustrator-to-draw-my",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791337263000,
+   "template": "number",
+   "focus": "points",
+   "fields": {
+    "title": "I hired an illustrator to draw my house. Now it's my Home Assistant dashboard",
+    "rank": 4,
+    "points": 427,
+    "comments": 73,
+    "what": "他把自家房子画成插画，做成智能家居控制面板，全家都爱用。",
+    "who": "玩智能家居、想让家人也愿意用控制面板的人。",
+    "highlight": "状态用动画表现，界面只剩少量图标和读数，好看又好用。",
+    "title_zh": "我请插画师画了自家房子，现在成了我的 Home Assistant 面板"
+   },
+   "brief": {
+    "what": "他把自家房子画成插画，做成智能家居控制面板，全家都爱用。",
+    "who": "玩智能家居、想让家人也愿意用控制面板的人。",
+    "highlight": "状态用动画表现，界面只剩少量图标和读数，好看又好用。"
+   },
+   "script": [
+    {
+     "tpl": "有人把自家房子画成插画，直接做成 Home Assistant 的智能家居控制面板，家里人都愿意上手用。",
+     "text": "有人把自家房子画成插画，直接做成 Home Assistant 的智能家居控制面板，家里人都愿意上手用。",
+     "part": "what"
+    },
+    {
+     "tpl": "如果你家里折腾智能家居，但家人总嫌操作界面太复杂，这个方法把状态变成动画，界面只留少量图标和读数，好看又直观。",
+     "text": "如果你家里折腾智能家居，但家人总嫌操作界面太复杂，这个方法把状态变成动画，界面只留少量图标和读数，好看又直观。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你也在用 Home Assistant，今天就去把自家房子的平面图换成插画，开关状态用动画表现，试试能不能让家里人主动来点。",
+     "text": "如果你也在用 Home Assistant，今天就去把自家房子的平面图换成插画，开关状态用动画表现，试试能不能让家里人主动来点。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/hn-49986882.mp3",
+   "duration": 23.888,
+   "spoken": "有人把自家房子画成插画，直接做成 Home Assistant 的智能家居控制面板，家里人都愿意上手用。如果你家里折腾智能家居，但家人总嫌操作界面太复杂，这个方法把状态变成动画，界面只留少量图标和读数，好看又直观。如果你也在用 Home Assistant，今天就去把自家房子的平面图换成插画，开关状态用动画表现，试试能不能让家里人主动来点。",
+   "rounds": [
+    {
+     "text": "有人把自家房子画成插画，直接做成 Home Assistant 的智能家居控制面板，家里人都愿意上手用。",
+     "start_time": 0,
+     "end_time": 5.958,
+     "part": "what"
+    },
+    {
+     "text": "如果你家里折腾智能家居，但家人总嫌操作界面太复杂，这个方法把状态变成动画，界面只留少量图标和读数，好看又直观。",
+     "start_time": 5.958,
+     "end_time": 14.465,
+     "part": "who"
+    },
+    {
+     "text": "如果你也在用 Home Assistant，今天就去把自家房子的平面图换成插画，开关状态用动画表现，试试能不能让家里人主动来点。",
+     "start_time": 14.465,
+     "end_time": 23.086,
+     "part": "take"
+    }
+   ],
+   "take": "如果你也在用 Home Assistant，今天就去把自家房子的平面图换成插画，开关状态用动画表现，试试能不能让家里人主动来点。"
+  },
+  {
+   "id": "gh-mattpocock/skills",
+   "source": "GitHub Trending",
+   "url": "https://github.com/mattpocock/skills",
+   "fetchedAt": 1791514076203,
+   "publishedAt": null,
+   "template": "number",
+   "focus": "starsToday",
+   "fields": {
+    "title": "mattpocock / skills",
+    "description": "Skills for Real Engineers. Straight from my .agents directory.",
+    "language": "Shell",
+    "rank": 4,
+    "stars": 281227,
+    "forks": 23567,
+    "starsToday": 1774,
+    "what": "给编程助手加装技能包，让 AI 按真实工程流程干活",
+    "who": "天天用 AI 写代码、嫌它跑偏又啰嗦的开发者",
+    "highlight": "先让 AI 反问清楚需求，再动手写，少返工"
+   },
+   "brief": {
+    "what": "给编程助手加装技能包，让 AI 按真实工程流程干活",
+    "who": "天天用 AI 写代码、嫌它跑偏又啰嗦的开发者",
+    "highlight": "先让 AI 反问清楚需求，再动手写，少返工"
+   },
+   "script": [
+    {
+     "tpl": "GitHub 上最近有个项目叫 {{title}}，它给编程助手加装技能包，让 AI 按真实工程流程来干活，不是空谈。",
+     "text": "GitHub 上最近有个项目叫 mattpocock / skills，它给编程助手加装技能包，让 AI 按真实工程流程来干活，不是空谈。",
+     "part": "what"
+    },
+    {
+     "tpl": "如果你天天用 AI 写代码，又嫌它跑偏还啰嗦，那这个东西就是为你准备的，能让 AI 更像工程师。",
+     "text": "如果你天天用 AI 写代码，又嫌它跑偏还啰嗦，那这个东西就是为你准备的，能让 AI 更像工程师。",
+     "part": "who"
+    },
+    {
+     "tpl": "今天就可以拿它跟现在的用法对比一下，让 AI 先反问清楚需求再动手写，减少返工。",
+     "text": "今天就可以拿它跟现在的用法对比一下，让 AI 先反问清楚需求再动手写，减少返工。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/gh-mattpocock-skills.mp3",
+   "duration": 20.864,
+   "spoken": "GitHub 上最近有个项目叫 mattpocock / skills，它给编程助手加装技能包，让 AI 按真实工程流程来干活，不是空谈。如果你天天用 AI 写代码，又嫌它跑偏还啰嗦，那这个东西就是为你准备的，能让 AI 更像工程师。今天就可以拿它跟现在的用法对比一下，让 AI 先反问清楚需求再动手写，减少返工。",
+   "rounds": [
+    {
+     "text": "GitHub 上最近有个项目叫 mattpocock / skills，它给编程助手加装技能包，让 AI 按真实工程流程来干活，不是空谈。",
+     "start_time": 0,
+     "end_time": 8.551,
+     "part": "what"
+    },
+    {
+     "text": "如果你天天用 AI 写代码，又嫌它跑偏还啰嗦，那这个东西就是为你准备的，能让 AI 更像工程师。",
+     "start_time": 8.551,
+     "end_time": 14.627,
+     "part": "who"
+    },
+    {
+     "text": "今天就可以拿它跟现在的用法对比一下，让 AI 先反问清楚需求再动手写，减少返工。",
+     "start_time": 14.627,
+     "end_time": 20.057,
+     "part": "take"
+    }
+   ],
+   "take": "今天就可以拿它跟现在的用法对比一下，让 AI 先反问清楚需求再动手写，减少返工。"
+  },
+  {
+   "id": "ph-1271658",
+   "source": "Product Hunt",
+   "url": "https://www.producthunt.com/products/side",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791294148000,
+   "template": "title",
+   "fields": {
+    "title": "Side",
+    "tagline": "A little AI chat panel that lives beside your Mac's Dock",
+    "rank": 4,
+    "what": "它是个贴在 Mac 程序坞旁边的小聊天面板，随时能问 AI，不挡别的窗口",
+    "who": "整天用 AI 问问题、又嫌切浏览器麻烦的 Mac 用户",
+    "highlight": "能边聊边换模型和账号，还免费开源"
+   },
+   "brief": {
+    "what": "它是个贴在 Mac 程序坞旁边的小聊天面板，随时能问 AI，不挡别的窗口",
+    "who": "整天用 AI 问问题、又嫌切浏览器麻烦的 Mac 用户",
+    "highlight": "能边聊边换模型和账号，还免费开源"
+   },
+   "script": [
+    {
+     "tpl": "{{title}} 是个贴在 Mac 程序坞旁边的小聊天面板，随时能问 AI，不挡别的窗口。今天它在 Product Hunt 上拿了第 {{rank}} 名。",
+     "text": "Side 是个贴在 Mac 程序坞旁边的小聊天面板，随时能问 AI，不挡别的窗口。今天它在 Product Hunt 上拿了第 4 名。",
+     "part": "what"
+    },
+    {
+     "tpl": "如果你整天用 AI 问问题，又嫌切浏览器麻烦，那这个就挺适合你，尤其你是 Mac 用户的话。",
+     "text": "如果你整天用 AI 问问题，又嫌切浏览器麻烦，那这个就挺适合你，尤其你是 Mac 用户的话。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你还在用浏览器切来切去问 AI，今天就去试一下 {{title}}，它还能边聊边换模型和账号，关键免费开源。",
+     "text": "如果你还在用浏览器切来切去问 AI，今天就去试一下 Side，它还能边聊边换模型和账号，关键免费开源。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/ph-1271658.mp3",
+   "duration": 21.296,
+   "spoken": "Side 是个贴在 Mac 程序坞旁边的小聊天面板，随时能问 AI，不挡别的窗口。今天它在 Product Hunt 上拿了第 4 名。如果你整天用 AI 问问题，又嫌切浏览器麻烦，那这个就挺适合你，尤其你是 Mac 用户的话。如果你还在用浏览器切来切去问 AI，今天就去试一下 Side，它还能边聊边换模型和账号，关键免费开源。",
+   "rounds": [
+    {
+     "text": "Side 是个贴在 Mac 程序坞旁边的小聊天面板，随时能问 AI，不挡别的窗口。今天它在 Product Hunt 上拿了第 4 名。",
+     "start_time": 0,
+     "end_time": 8.569,
+     "part": "what"
+    },
+    {
+     "text": "如果你整天用 AI 问问题，又嫌切浏览器麻烦，那这个就挺适合你，尤其你是 Mac 用户的话。",
+     "start_time": 8.569,
+     "end_time": 13.869,
+     "part": "who"
+    },
+    {
+     "text": "如果你还在用浏览器切来切去问 AI，今天就去试一下 Side，它还能边聊边换模型和账号，关键免费开源。",
+     "start_time": 13.869,
+     "end_time": 20.512,
+     "part": "take"
+    }
+   ],
+   "take": "如果你还在用浏览器切来切去问 AI，今天就去试一下 Side，它还能边聊边换模型和账号，关键免费开源。"
+  },
+  {
+   "id": "aihot-x4s3jss6ofplyvimq6213cv41",
+   "source": "AIHOT",
+   "url": "https://techcrunch.com/2026/10/08/google-brings-agentic-ai-to-gemini-starting-with-businesses/",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791485717000,
+   "template": "number",
+   "focus": "sourceCount",
+   "fields": {
+    "title": "谷歌云发布通用工作智能体 Gemini Agent",
+    "origin": "TechCrunch：AI（RSS）",
+    "rank": 4,
+    "sourceCount": 5,
+    "discussions": 14,
+    "permalink": "https://aihot.news/items/x4s3jss6ofplyvimq6213cv41",
+    "what": "谷歌把 Gemini 变成能自己规划、动手干活的通用工作智能体",
+    "who": "先用在企业里，用 Gemini 办公的公司和团队会最先在意",
+    "highlight": "它有自己的工作账号和邮箱，像同事一样被拉进群聊干活"
+   },
+   "brief": {
+    "what": "谷歌把 Gemini 变成能自己规划、动手干活的通用工作智能体",
+    "who": "先用在企业里，用 Gemini 办公的公司和团队会最先在意",
+    "highlight": "它有自己的工作账号和邮箱，像同事一样被拉进群聊干活"
+   },
+   "script": [
+    {
+     "tpl": "谷歌云发布了一个通用工作智能体，叫 Gemini Agent。它把 Gemini 变成能自己规划、动手干活的工具。",
+     "text": "谷歌云发布了一个通用工作智能体，叫 Gemini Agent。它把 Gemini 变成能自己规划、动手干活的工具。",
+     "part": "what"
+    },
+    {
+     "tpl": "如果你在企业里用 Gemini 办公，你和你的团队会最先碰到它。它有自己的工作账号和邮箱，能被拉进群聊干活，像多了一个同事。",
+     "text": "如果你在企业里用 Gemini 办公，你和你的团队会最先碰到它。它有自己的工作账号和邮箱，能被拉进群聊干活，像多了一个同事。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你在用 Gemini 办公，今天就去后台看看有没有这个新入口，试试把它拉进项目群，让它自己领一个任务。",
+     "text": "如果你在用 Gemini 办公，今天就去后台看看有没有这个新入口，试试把它拉进项目群，让它自己领一个任务。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/aihot-x4s3jss6ofplyvimq6213cv41.mp3",
+   "duration": 22.448,
+   "spoken": "谷歌云发布了一个通用工作智能体，叫 Gemini Agent。它把 Gemini 变成能自己规划、动手干活的工具。如果你在企业里用 Gemini 办公，你和你的团队会最先碰到它。它有自己的工作账号和邮箱，能被拉进群聊干活，像多了一个同事。如果你在用 Gemini 办公，今天就去后台看看有没有这个新入口，试试把它拉进项目群，让它自己领一个任务。",
+   "rounds": [
+    {
+     "text": "谷歌云发布了一个通用工作智能体，叫 Gemini Agent。它把 Gemini 变成能自己规划、动手干活的工具。",
+     "start_time": 0,
+     "end_time": 7.713,
+     "part": "what"
+    },
+    {
+     "text": "如果你在企业里用 Gemini 办公，你和你的团队会最先碰到它。它有自己的工作账号和邮箱，能被拉进群聊干活，像多了一个同事。",
+     "start_time": 7.713,
+     "end_time": 15.698,
+     "part": "who"
+    },
+    {
+     "text": "如果你在用 Gemini 办公，今天就去后台看看有没有这个新入口，试试把它拉进项目群，让它自己领一个任务。",
+     "start_time": 15.698,
+     "end_time": 21.65,
+     "part": "take"
+    }
+   ],
+   "take": "如果你在用 Gemini 办公，今天就去后台看看有没有这个新入口，试试把它拉进项目群，让它自己领一个任务。"
+  },
+  {
+   "id": "hn-50009295",
+   "source": "Hacker News",
+   "url": "https://www.theranos.world/",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791481909000,
+   "template": "number",
+   "focus": "points",
+   "fields": {
+    "title": "Theranos.world",
+    "rank": 6,
+    "points": 305,
+    "comments": 122,
+    "what": "它把Theranos那场骗局做成能亲手操作的桌面模拟",
+    "who": "关心创业泡沫和科技伦理的人会想试试",
+    "highlight": "不用密码就能登进那个世界，亲手翻看当年的文件",
+    "title_zh": "Theranos.world：把Theranos骗局做成桌面模拟"
+   },
+   "brief": {
+    "what": "它把Theranos那场骗局做成能亲手操作的桌面模拟",
+    "who": "关心创业泡沫和科技伦理的人会想试试",
+    "highlight": "不用密码就能登进那个世界，亲手翻看当年的文件"
+   },
+   "script": [
+    {
+     "tpl": "有人把 Theranos 那场骗局做成一个能亲手操作的桌面模拟，名字就叫 Theranos 模拟世界。",
+     "text": "有人把 Theranos 那场骗局做成一个能亲手操作的桌面模拟，名字就叫 Theranos 模拟世界。",
+     "part": "what"
+    },
+    {
+     "tpl": "关心创业泡沫和科技伦理的人会想试试，因为不用密码就能登进去，像走进一个没上锁的档案室。",
+     "text": "关心创业泡沫和科技伦理的人会想试试，因为不用密码就能登进去，像走进一个没上锁的档案室。",
+     "part": "who"
+    },
+    {
+     "tpl": "今天就去打开这个模拟，亲手翻翻当年的内部文件，看看造假是怎么被掩盖的。",
+     "text": "今天就去打开这个模拟，亲手翻翻当年的内部文件，看看造假是怎么被掩盖的。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/hn-50009295.mp3",
+   "duration": 17.6,
+   "spoken": "有人把 Theranos 那场骗局做成一个能亲手操作的桌面模拟，名字就叫 Theranos 模拟世界。关心创业泡沫和科技伦理的人会想试试，因为不用密码就能登进去，像走进一个没上锁的档案室。今天就去打开这个模拟，亲手翻翻当年的内部文件，看看造假是怎么被掩盖的。",
+   "rounds": [
+    {
+     "text": "有人把 Theranos 那场骗局做成一个能亲手操作的桌面模拟，名字就叫 Theranos 模拟世界。",
+     "start_time": 0,
+     "end_time": 5.66,
+     "part": "what"
+    },
+    {
+     "text": "关心创业泡沫和科技伦理的人会想试试，因为不用密码就能登进去，像走进一个没上锁的档案室。",
+     "start_time": 5.66,
+     "end_time": 11.436,
+     "part": "who"
+    },
+    {
+     "text": "今天就去打开这个模拟，亲手翻翻当年的内部文件，看看造假是怎么被掩盖的。",
+     "start_time": 11.436,
+     "end_time": 16.829,
+     "part": "take"
+    }
+   ],
+   "take": "今天就去打开这个模拟，亲手翻翻当年的内部文件，看看造假是怎么被掩盖的。"
+  },
+  {
+   "id": "gh-EpicGames/raddebugger",
+   "source": "GitHub Trending",
+   "url": "https://github.com/EpicGames/raddebugger",
+   "fetchedAt": 1791514076203,
+   "publishedAt": null,
+   "template": "number",
+   "focus": "starsToday",
+   "fields": {
+    "title": "EpicGames / raddebugger",
+    "description": "A native, user-mode, multi-process, graphical debugger.",
+    "language": "C",
+    "rank": 6,
+    "stars": 8141,
+    "forks": 391,
+    "starsToday": 279,
+    "what": "它是一款原生图形调试器，能调试多进程程序，目前主要支持本地 Windows 环境。",
+    "who": "给写大型项目的开发者用，尤其是被漫长编译调试循环拖慢的人。",
+    "highlight": "配套的链接器专为超大项目优化，链接明显更快，还能生成自己的调试信息格式。"
+   },
+   "brief": {
+    "what": "它是一款原生图形调试器，能调试多进程程序，目前主要支持本地 Windows 环境。",
+    "who": "给写大型项目的开发者用，尤其是被漫长编译调试循环拖慢的人。",
+    "highlight": "配套的链接器专为超大项目优化，链接明显更快，还能生成自己的调试信息格式。"
+   },
+   "script": [
+    {
+     "tpl": "EpicGames 出的 raddebugger 是一款原生图形调试器，专门调试多进程程序，目前主要跑在本地 Windows 上。",
+     "text": "EpicGames 出的 raddebugger 是一款原生图形调试器，专门调试多进程程序，目前主要跑在本地 Windows 上。",
+     "part": "what"
+    },
+    {
+     "tpl": "写大型项目的开发者，特别是被漫长编译调试循环拖慢的人，可以用它。配套链接器给超大项目优化，链接更快，还能生成自己的调试信息格式。",
+     "text": "写大型项目的开发者，特别是被漫长编译调试循环拖慢的人，可以用它。配套链接器给超大项目优化，链接更快，还能生成自己的调试信息格式。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你现在还在靠默认调试器反复等链接，今天拿它对比一下，看链接速度和调试信息格式是不是更顺手。",
+     "text": "如果你现在还在靠默认调试器反复等链接，今天拿它对比一下，看链接速度和调试信息格式是不是更顺手。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/gh-EpicGames-raddebugger.mp3",
+   "duration": 26.048,
+   "spoken": "EpicGames 出的 raddebugger 是一款原生图形调试器，专门调试多进程程序，目前主要跑在本地 Windows 上。写大型项目的开发者，特别是被漫长编译调试循环拖慢的人，可以用它。配套链接器给超大项目优化，链接更快，还能生成自己的调试信息格式。如果你现在还在靠默认调试器反复等链接，今天拿它对比一下，看链接速度和调试信息格式是不是更顺手。",
+   "rounds": [
+    {
+     "text": "EpicGames 出的 raddebugger 是一款原生图形调试器，专门调试多进程程序，目前主要跑在本地 Windows 上。",
+     "start_time": 0,
+     "end_time": 8.559,
+     "part": "what"
+    },
+    {
+     "text": "写大型项目的开发者，特别是被漫长编译调试循环拖慢的人，可以用它。配套链接器给超大项目优化，链接更快，还能生成自己的调试信息格式。",
+     "start_time": 8.559,
+     "end_time": 18.52,
+     "part": "who"
+    },
+    {
+     "text": "如果你现在还在靠默认调试器反复等链接，今天拿它对比一下，看链接速度和调试信息格式是不是更顺手。",
+     "start_time": 18.52,
+     "end_time": 25.263,
+     "part": "take"
+    }
+   ],
+   "take": "如果你现在还在靠默认调试器反复等链接，今天拿它对比一下，看链接速度和调试信息格式是不是更顺手。"
+  },
+  {
+   "id": "ph-1253993",
+   "source": "Product Hunt",
+   "url": "https://www.producthunt.com/products/chickytutor",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1789682659000,
+   "template": "title",
+   "fields": {
+    "title": "ChickyTutor",
+    "tagline": "A private language tutor that knows you better every day.",
+    "rank": 5,
+    "what": "它是一款AI语音语言陪练，能边聊边讲语法，还带互动白板。",
+    "who": "想从背单词过渡到开口说话的语言学习者，以及想把课堂和日常练习连起来的学校。",
+    "highlight": "把真人教学和每天AI对话练习接在一起，还能按你的进度给反馈。"
+   },
+   "brief": {
+    "what": "它是一款AI语音语言陪练，能边聊边讲语法，还带互动白板。",
+    "who": "想从背单词过渡到开口说话的语言学习者，以及想把课堂和日常练习连起来的学校。",
+    "highlight": "把真人教学和每天AI对话练习接在一起，还能按你的进度给反馈。"
+   },
+   "script": [
+    {
+     "tpl": "ChickyTutor 是个AI语音语言陪练，能边聊边讲语法，还带互动白板。你可以直接开口跟它对话，它按你的进度给反馈。",
+     "text": "ChickyTutor 是个AI语音语言陪练，能边聊边讲语法，还带互动白板。你可以直接开口跟它对话，它按你的进度给反馈。",
+     "part": "what"
+    },
+    {
+     "tpl": "如果你正从背单词过渡到开口说话，或者想把课堂和日常练习连起来，这正好能补上口语练习的空档。学校也可以用，把课堂和课下对话接上。",
+     "text": "如果你正从背单词过渡到开口说话，或者想把课堂和日常练习连起来，这正好能补上口语练习的空档。学校也可以用，把课堂和课下对话接上。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你学语言但开口机会少，今天就去试一下，拿它跟你原来的背单词方法对比一下，看能不能更快开口。",
+     "text": "如果你学语言但开口机会少，今天就去试一下，拿它跟你原来的背单词方法对比一下，看能不能更快开口。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/ph-1253993.mp3",
+   "duration": 22.808,
+   "spoken": "ChickyTutor 是个AI语音语言陪练，能边聊边讲语法，还带互动白板。你可以直接开口跟它对话，它按你的进度给反馈。如果你正从背单词过渡到开口说话，或者想把课堂和日常练习连起来，这正好能补上口语练习的空档。学校也可以用，把课堂和课下对话接上。如果你学语言但开口机会少，今天就去试一下，拿它跟你原来的背单词方法对比一下，看能不能更快开口。",
+   "rounds": [
+    {
+     "text": "ChickyTutor 是个AI语音语言陪练，能边聊边讲语法，还带互动白板。你可以直接开口跟它对话，它按你的进度给反馈。",
+     "start_time": 0,
+     "end_time": 6.971,
+     "part": "what"
+    },
+    {
+     "text": "如果你正从背单词过渡到开口说话，或者想把课堂和日常练习连起来，这正好能补上口语练习的空档。学校也可以用，把课堂和课下对话接上。",
+     "start_time": 6.971,
+     "end_time": 16.19,
+     "part": "who"
+    },
+    {
+     "text": "如果你学语言但开口机会少，今天就去试一下，拿它跟你原来的背单词方法对比一下，看能不能更快开口。",
+     "start_time": 16.19,
+     "end_time": 22.02,
+     "part": "take"
+    }
+   ],
+   "take": "如果你学语言但开口机会少，今天就去试一下，拿它跟你原来的背单词方法对比一下，看能不能更快开口。"
+  },
+  {
+   "id": "aihot-don06si59xc143ed92gdmlnvo",
+   "source": "AIHOT",
+   "url": "https://x.com/Google/status/2107836410254291345",
+   "fetchedAt": 1791514076203,
+   "publishedAt": 1791471209000,
+   "template": "number",
+   "focus": "sourceCount",
+   "fields": {
+    "title": "Google 全球开放 SynthID 水印检测器",
+    "origin": "X：Google (@Google)",
+    "rank": 5,
+    "sourceCount": 6,
+    "discussions": 24,
+    "permalink": "https://aihot.news/items/don06si59xc143ed92gdmlnvo",
+    "what": "谷歌上线了水印检测门户，上传图片、视频或音频就能查是不是AI生成的。",
+    "who": "做内容审核、媒体求证和日常刷到可疑素材的人会马上用得上。",
+    "highlight": "它把检测范围扩到多家合作方，还准备拉上更多伙伴一起做透明。"
+   },
+   "brief": {
+    "what": "谷歌上线了水印检测门户，上传图片、视频或音频就能查是不是AI生成的。",
+    "who": "做内容审核、媒体求证和日常刷到可疑素材的人会马上用得上。",
+    "highlight": "它把检测范围扩到多家合作方，还准备拉上更多伙伴一起做透明。"
+   },
+   "script": [
+    {
+     "tpl": "谷歌上线了名叫SynthID的水印检测门户，你上传图片、视频或者音频，它就能查是不是AI生成的。",
+     "text": "谷歌上线了名叫SynthID的水印检测门户，你上传图片、视频或者音频，它就能查是不是AI生成的。",
+     "part": "what"
+    },
+    {
+     "tpl": "做内容审核、媒体求证的人，还有平时刷到可疑素材的你，都能马上用上它。",
+     "text": "做内容审核、媒体求证的人，还有平时刷到可疑素材的你，都能马上用上它。",
+     "part": "who"
+    },
+    {
+     "tpl": "如果你手头有拿不准的图片、视频或音频，今天就去上传试一下，看看它怎么判断。",
+     "text": "如果你手头有拿不准的图片、视频或音频，今天就去上传试一下，看看它怎么判断。",
+     "part": "take"
+    }
+   ],
+   "audio": "/audio/aihot-don06si59xc143ed92gdmlnvo.mp3",
+   "duration": 19.976,
+   "spoken": "谷歌上线了名叫SynthID的水印检测门户，你上传图片、视频或者音频，它就能查是不是AI生成的。做内容审核、媒体求证的人，还有平时刷到可疑素材的你，都能马上用上它。如果你手头有拿不准的图片、视频或音频，今天就去上传试一下，看看它怎么判断。",
+   "rounds": [
+    {
+     "text": "谷歌上线了名叫SynthID的水印检测门户，你上传图片、视频或者音频，它就能查是不是AI生成的。",
+     "start_time": 0,
+     "end_time": 7.807,
+     "part": "what"
+    },
+    {
+     "text": "做内容审核、媒体求证的人，还有平时刷到可疑素材的你，都能马上用上它。",
+     "start_time": 7.807,
+     "end_time": 13.96,
+     "part": "who"
+    },
+    {
+     "text": "如果你手头有拿不准的图片、视频或音频，今天就去上传试一下，看看它怎么判断。",
+     "start_time": 13.96,
+     "end_time": 19.179,
+     "part": "take"
+    }
+   ],
+   "take": "如果你手头有拿不准的图片、视频或音频，今天就去上传试一下，看看它怎么判断。"
   }
  ]
 }

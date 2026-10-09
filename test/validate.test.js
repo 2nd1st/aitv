@@ -35,3 +35,15 @@ test("节目单连续无空档，缺音频的跳过，播完循环", () => {
   assert.deepEqual(locate(s, 1000 + 12000), { index: 1, t: 2 });
   assert.deepEqual(locate(s, 1000 + 15000 + 3000), { index: 0, t: 3 });
 });
+
+test("正常稿子里的「一句话点评」能通过：白名单词先去掉再查", () => {
+  assert.equal(buildSpoken("一句话点评：{{title}} 是一个十分顺手的工具，唯一要做的就是今天试一下。", fields),
+    "一句话点评：Hy4 preview 是一个十分顺手的工具，唯一要做的就是今天试一下。");
+  // 白名单之外的「一」照样拦
+  assert.equal(buildSpoken("{{title}} 是新一代工具", fields), null);
+  assert.equal(buildSpoken("{{title}}，一键安装", fields), null);
+});
+test("what / who / highlight 是文本字段，可以原样插入", () => {
+  const f = { what: "一个画图技能", who: "开发者", highlight: "风格统一" };
+  assert.equal(buildSpoken("{{what}}，给{{who}}用，{{highlight}}。", f), "一个画图技能，给开发者用，风格统一。");
+});
