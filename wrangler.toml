@@ -1,6 +1,7 @@
 name = "aitv"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
+routes = [{ pattern = "aitv.qiaomu.ai", custom_domain = true }]
 
 [assets]
 directory = "public"
@@ -16,3 +17,4 @@ run_worker_first = ["/api/*"]
 # bucket_name = "aitv-audio"
 # [triggers]
 # crons = ["*/15 * * * *"]
+
