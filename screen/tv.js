@@ -58,13 +58,18 @@ const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const hasCJK = (s) => /[\u3400-\u9fff]/.test(s || "");
 
 // 讲解分段：是什么 / 跟你有关 / AI 点评（没有点评就用亮点）
+// 画面上的字和念的一致：rounds 标了 part 就用念的原句，没标才用提炼的简版
+function spokenOf(item, key) {
+  const rs = (item.rounds || []).filter((r) => r.part === key);
+  return rs.length ? rs.map((r) => r.text).join("") : null;
+}
 function partsOf(item) {
   const f = item.fields || {};
   const take = item.take ?? f.take;
   const list = [];
-  if (f.what) list.push({ key: "what", label: "是什么", text: f.what });
-  if (f.who) list.push({ key: "who", label: "跟你有关", text: f.who });
-  if (take) list.push({ key: "take", label: "AI 点评", text: take }); // 点评是模型写的，标明 AI，不署任何人名
+  if (f.what) list.push({ key: "what", label: "是什么", text: spokenOf(item, "what") || f.what });
+  if (f.who) list.push({ key: "who", label: "跟你有关", text: spokenOf(item, "who") || f.who });
+  if (take) list.push({ key: "take", label: "AI 点评", text: spokenOf(item, "take") || take }); // 点评是模型写的，标明 AI，不署任何人名
   else if (f.highlight) list.push({ key: "highlight", label: "亮点", text: f.highlight });
   return list;
 }
