@@ -122,11 +122,11 @@ test("fundingUsd 有单位绑定：只能念「融资 N 美元」；编的数被
   assert.equal(buildSpoken("这次融资 {{fundingUsd}} 元。", f), null);
 });
 
-test("三个 RSS 源都是文章：6 小时发布时间规则（不是榜单）", () => {
+test("三个 RSS 源都是文章：按发布时间走 72 小时窗口（不是榜单）", () => {
   const [it] = parseOpenAINews(fx("rss-openai.xml"), NOW); // 2026-10-08 16:00 UTC，14 小时前
-  assert.ok(isStale(it, NOW));
-  assert.ok(!isStale(it, it.publishedAt + 5 * 3600_000));
-  assert.ok(isStale(it, it.publishedAt + 6 * 3600_000 + 1));
+  assert.ok(!isStale(it, NOW));
+  assert.ok(!isStale(it, it.publishedAt + 71 * 3600_000));
+  assert.ok(isStale(it, it.publishedAt + 72 * 3600_000 + 1));
 });
 
 test("fetchAll：三个 RSS 源走同一套重试（503 后重试成功），带 RSS accept 头", async () => {

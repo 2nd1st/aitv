@@ -260,7 +260,7 @@ export function parseAIHOT(json, fetchedAt) {
 }
 
 // ---------- 官方 RSS / 媒体 RSS（OpenAI News、Google DeepMind 博客、TechCrunch AI 频道）----------
-// 都是文章：publishedAt = RSS 的 <pubDate>（原样解析，读不出就整条跳过，不拿抓取时间顶替），走文章的 6 / 12 小时规则。
+// 都是文章：publishedAt = RSS 的 <pubDate>（原样解析，读不出就整条跳过，不拿抓取时间顶替），走 72 小时窗口（FRESH_WINDOW_MS）。
 // kindFixed: "news"：类型标签固定为新闻（官方博客、媒体报道都不是「产品 / 项目」，点评不许说「去试」），补料那步不让模型改。
 const RSS_MAX = 30; // 每个 feed 只看最新的 30 条（OpenAI 的 feed 有一千多条全量历史）
 const DESC_MAX = 240;

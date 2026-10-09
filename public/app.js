@@ -1,6 +1,9 @@
 // 时钟、节目单、音频（沃兹）。画面交给 screen/tv.js（艾维）。
-import { createTV } from "/screen/tv.js";
-import { locate, pick, adopt } from "/timeline.js";
+import { locate, pick, adopt, walk as walkAt } from "/timeline.js";
+// 画面：默认 /screen/（现在这版）；?ui=v4 用艾维的第四版（/screen/v4/，分支 screen-v4 原样拷过来）
+const UI = new URLSearchParams(location.search).get("ui") === "v4" ? "v4" : "default";
+if (UI === "v4") document.querySelector('link[href="/screen/tv.css"]')?.setAttribute("href", "/screen/v4/tv.css");
+const { createTV } = await import(UI === "v4" ? "/screen/v4/tv.js" : "/screen/tv.js");
 
 // 校时：测 7 次往返，取往返最短的那次，偏差 = 服务器时间 - 本地中点
 async function syncClock() {
@@ -48,7 +51,7 @@ const cache = new Map();
 let primed = null; // { audio, url, t }：switchAt 之后第一条，next 一到就预加载好，切换时不卡
 function audioFor(item) {
   if (!cache.has(item.audio)) {
-    const a = new Audio(item.audio); a.preload = "auto"; cache.set(item.audio, a);
+    const a = new Audio(item.audio); a.preload = "auto"; a.muted = !on; cache.set(item.audio, a);
     if (cache.size > 5) {
       for (const [k, old] of cache) {
         if (old !== playing?.audio && old !== primed?.audio) { cache.delete(k); break; }
@@ -70,18 +73,8 @@ function primeNext() {
 
 }
 primeNext();
-// 从时刻 ms 起往后数 k 条（跨 switchAt 时自动换成 next 的条目）
-function walk(ms, k) {
-  const out = [];
-  let cur = ms;
-  for (let j = 0; j < k; j++) {
-    const s = pick(state, cur), { i, t } = locate(s, cur), it = s.items[i];
-    if (!it) break;
-    out.push(it);
-    cur += Math.max(1, Math.round((it.duration - t) * 1000)); // 跳到这条结束（= 下一条开始）
-  }
-  return out;
-}
+// 从时刻 ms 起往后数 k 条（跨 switchAt 时自动换成 next 的条目）：见 timeline.js walk
+const walk = (ms, k) => walkAt(state, ms, k);
 const prefetchAround = (ms) => walk(ms, 2).forEach(audioFor);
 prefetchAround(now());
 
@@ -110,18 +103,30 @@ function seekWhenReady(a, url) {
   if (a.readyState < 3) a.addEventListener("canplay", apply, { once: true });
 }
 
+// 点之前就静音跟着直播在放（浏览器允许静音自动播放）：点一下只是取消静音，几乎没有延迟。
+// 浏览器不让静音自动播放（warmBlocked）时退一步：每秒把当前这条定位到直播位置附近（只缓冲、不播），点的时候只差一点点。
+let warmBlocked = false;
+const playA = (a) => a.play().catch(() => { if (!on) warmBlocked = true; });
+let lastPos = 0;
+function positionOnly(item, t) {
+  const a = audioFor(item), ms = performance.now();
+  if (ms - lastPos < 1000 || a.readyState < 1 || a.seeking) return;
+  lastPos = ms;
+  if (Math.abs(a.currentTime - t) > 1) a.currentTime = Math.min(t + 0.5, (a.duration || Infinity) - 0.05);
+}
+
 let lastFix = 0;
 function syncAudio(item, t) {
   const a = audioFor(item);
   if (!playing || playing.audio !== a) {
     if (playing) playing.audio.pause();
     playing = { id: item.id, audio: a };
-    const rec = { id: item.id, at: now(), ready: a.readyState, primed: primed?.audio === a };
+    const rec = { id: item.id, kind: playing ? "switch" : "start", at: now(), ready: a.readyState, primed: primed?.audio === a };
     switchLog.push(rec); if (switchLog.length > 20) switchLog.shift();
     a.addEventListener("playing", () => { rec.playingAt = now(); rec.stallMs = Math.round(rec.playingAt - rec.at); }, { once: true });
     // 预加载好的那条已经停在正确位置：差得不多就不 seek（seek 本身要等几百毫秒），直接放，漂移交给后面的校正
     if (a.readyState >= 1 && Math.abs(a.currentTime - t) > 0.25) a.currentTime = Math.max(0, t);
-    a.play().catch(() => {});      // 开机那次点击里同步调用，保住手势
+    playA(a);                       // 开机那次点击里同步调用，保住手势
     seekWhenReady(a, item.audio);
     prefetchAround(vnow());
     return;
@@ -129,7 +134,7 @@ function syncAudio(item, t) {
   // 暂停后继续：从时间线上的位置接着放
   if (a.paused && !a.ended && !(t >= (a.duration || Infinity) - 0.05)) {
     if (a.readyState >= 1) a.currentTime = Math.max(0, t);
-    a.play().catch(() => {});
+    playA(a);
     seekWhenReady(a, item.audio);
     return;
   }
@@ -167,9 +172,13 @@ function goLive() {
 function listen() {
   on = true;
   tv?.setMuted?.(false);
+  for (const a of cache.values()) a.muted = false; // 已经静音在放的话，这一下就出声
   const { item, t } = here();
+  if (playing && playing.audio.paused) playing.audio.play().catch(() => {}); // 在这次点击里同步调用，保住手势
   syncAudio(item, t);
+  tapLog.push({ at: performance.now(), wasPlaying: playing ? !playing.audio.paused : false, warmBlocked });
 }
+const tapLog = [];
 const tv = createTV(document.getElementById("root"), {
   onListen: listen,
   onPower: listen,
@@ -178,8 +187,13 @@ const tv = createTV(document.getElementById("root"), {
 });
 
 // 底部滚动条：接下来的几条
+// 列表没变就交出同一个数组（屏幕那边按内容比较，这里再挡一层：只有真的变了才重画）
+let lastUp = [], lastUpKey = "";
 function upcoming(ms, k = 5) {
-  return walk(ms, k + 1).slice(1).map((it) => ({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source }));
+  const list = walk(ms, k + 1).slice(1);
+  const key = list.map((it) => `${it.id}|${it.audio}`).join(",");
+  if (key !== lastUpKey) { lastUpKey = key; lastUp = list.map((it) => ({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source })); }
+  return lastUp;
 }
 
 // 旧条目（节目单里 stale: true，12 小时内一条都没有时留下的）右上角小字「N 小时前」；画面本身归 screen/ 管，这里只叠一层
@@ -187,20 +201,37 @@ const ageTag = Object.assign(document.createElement("div"), { id: "age-tag" });
 ageTag.style.cssText = "position:fixed;top:10px;right:12px;z-index:50;font:12px/1.4 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:10px;pointer-events:none;display:none";
 document.body.appendChild(ageTag);
 function showAge(item) {
+  if (UI === "v4") return; // 第四版自己在来源行标「N 小时前」
   const at = item?.stale ? (item.dateKind === "ranked" ? item.rankedAt : item.publishedAt) : null;
   const txt = at ? `${Math.max(1, Math.floor((now() - at) / 3600e3))} 小时前` : "";
   if (ageTag.textContent !== txt) { ageTag.textContent = txt; ageTag.style.display = txt ? "" : "none"; }
 }
 
+// 离条目边界还有 30 秒时再确认一次下一条的音频在缓冲（readyState < 3 就 load()），换条时不等网络。
+// 平时换条那一刻已经预取了下一条；这里兜住浏览器丢了预取 / 缓存被挤掉的情况。
+let lastWarm = 0;
+function warmNext(ms) {
+  const p = performance.now();
+  if (p - lastWarm < 1000) return;
+  lastWarm = p;
+  const { item, t } = here(ms);
+  if (!item || item.duration - t > 30) return;
+  const nx = walk(ms, 2)[1];
+  if (!nx || nx.audio === item.audio) return;
+  const a = audioFor(nx);
+  if (a.readyState < 3 && a.networkState !== 2 /* 没在加载 */) a.load();
+}
+
 function frame() {
   const n = vnow();
   const { item, t } = here(n);
+  if (!paused) warmNext(n);
   showAge(item);
-  if (on && !paused) syncAudio(item, t);
+  if (!paused) { if (on || !warmBlocked) syncAudio(item, t); else positionOnly(item, t); }
   // 暂停时画面定格；时钟仍走服务器时间
   tv.render(item, t, now(), { mode: "live", upcoming: upcoming(n) });
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__aitv.player = { switchLog, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
+window.__aitv.player = { switchLog, tapLog, get warmBlocked() { return warmBlocked; }, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
   drift() { const a = playing?.audio; if (!a) return null; const { t } = here(); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };

@@ -94,11 +94,11 @@ test("AIHOT 输入里带 X 时间（pubDateSource: x）才透传", () => {
   assert.ok(!("pubDateSource" in b));
 });
 
-test("流水线：RSS 兜底拿到的日期超过 6 小时 → skipped:stale，不进 brief", async () => {
+test("流水线：RSS 兜底拿到的日期超过 72 小时 → skipped:stale，不进 brief", async () => {
   const it = aihot("https://openai.com/index/oracle/");
   let calls = 0;
   const st = await advance({ id: it.id, item: it, step: "read", status: "pending", results: {}, tries: {}, errors: [] },
-    { now: T, fetch: site(), briefLLM: async () => { calls++; return "{}"; } });
+    { now: Date.parse("2026-10-08T16:00:00Z") + 73 * 3600_000, fetch: site(), briefLLM: async () => { calls++; return "{}"; } });
   assert.equal(st.status, "skipped"); assert.match(st.why, /^stale/); assert.equal(calls, 0);
   // 日志里要看得到读出来的日期（以前记成 null）
   assert.equal(st.item.publishedAt, Date.parse("Thu, 08 Oct 2026 16:00:00 GMT")); assert.equal(st.item.pubDateSource, "rss");

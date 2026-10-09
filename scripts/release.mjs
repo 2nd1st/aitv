@@ -135,6 +135,18 @@ if (cmd === "list") {
   console.log(`current：${e.current.version} ${e.current.items.length} 条，anchor ${fmt(e.current.anchor)}`);
   if (e.next) console.log(`next：${e.next.version} ${e.next.items.length} 条，${fmt(e.switchAt)} 切换`);
   console.log(`更新于 ${tl.updatedAt || "?"}（${tl.why || ""}）`);
+} else if (cmd === "cron-reinsert") {
+  // 手动跑一轮 cron 的上线那一步（同一份 runCron 代码）：不抓新条、不调模型、不合成（maxNewPerDay = 0），
+  // 只做「插回做完的、72 小时内、没下架的」+「下线过期的」，经 switchAt。在途还有条目时不跑（那要调模型）。
+  const dry = process.argv.includes("--dry-run");
+  const { runCron } = await import("../src/pipeline.js");
+  const idx = kvGet("pipe:index") || {};
+  if ((idx.pending || []).length) { console.log(`在途还有 ${idx.pending.join(",")}，这一步要调模型，等定时任务跑`); process.exit(1); }
+  const kv = { get: async (k) => kvGet(k), put: async (k, v) => { if (!dry) kvPutJson(k, v); }, delete: async (k) => { if (!dry) { try { wr("kv", "key", "delete", "--binding", "SCHEDULE", k, "--remote"); } catch {} } } };
+  const r2 = { head: async (k) => { const r = await fetch(`https://aitv.qiaomu.ai/audio/${k}`, { method: "HEAD" }); return r.ok ? { key: k, size: Number(r.headers.get("content-length")) || 2000 } : null; } };
+  const no = async () => { throw new Error("cron-reinsert 不调模型 / 合成"); };
+  const out = await runCron({ now: Date.now(), kv, r2, fetch: no, briefLLM: no, scriptLLM: no, tts: no, ttsCap: 0 }, { maxNewPerDay: 0, autoPublish: !dry });
+  console.log(JSON.stringify(out, null, 1));
 } else if (cmd === "pipeline") {
   // 定时流水线的状态（src/pipeline.js）：上一轮做了什么、在途 / 待上线 / 丢弃的条目、今天的合成额度
   const idx = kvGet("pipe:index") || {};
@@ -208,5 +220,5 @@ if (cmd === "list") {
   if (affected.size) kvPutJson("pointer", markVoid(kvGet("pointer") || ptr, [...affected], `含已下架稿子 ${entry.hash || entry.audio}${entry.id ? `（${entry.id}）` : ""}`));
   console.log(`已下架稿子 ${entry.hash || entry.audio}${entry.id ? `（${entry.id}）` : ""}；作废版本：${[...affected].join(", ") || "无"}。${now ? "紧急：立刻生效" : `${fmt(effAt)} 在条目边界生效`}。`);
 } else {
-  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id|hash> [--now] | timeline | timeline-init | pipeline [id] | untakedown <id|hash> | takedown-migrate"); process.exit(2);
+  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id|hash> [--now] | timeline | timeline-init | pipeline [id] | untakedown <id|hash> | takedown-migrate | cron-reinsert [--dry-run]"); process.exit(2);
 }

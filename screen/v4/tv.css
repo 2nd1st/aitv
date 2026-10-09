@@ -1,0 +1,133 @@
+:root{
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --bg: #0a0a0b;
+  --ink: #f5f2eb;
+  --ink-2: rgba(245,242,235,.78);
+  --ink-dim: rgba(245,242,235,.5);
+  --accent: #ffb547;
+  --live: #ff3b30;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font:16px/1.4 system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+
+/* 全屏铺满，没有外壳。字号按宽度算，竖屏时按高度封顶，免得字太大 */
+.tv{position:fixed;inset:0}
+.tv-screen{position:absolute;inset:0;overflow:hidden;background:var(--bg);isolation:isolate;container-type:size}
+.tv-picture{position:absolute;inset:0;font-size:min(1cqw,2cqh);cursor:pointer;
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-columns:minmax(0,1fr);isolation:isolate;padding:2.6em 4em 0}
+
+/* 背景：同一张图放大、模糊、压暗，铺满全屏 */
+.backdrop{position:absolute;inset:-4%;z-index:-2;background-size:cover;background-position:center;
+  filter:blur(3.2em) saturate(1.2) brightness(.32);opacity:0;transition:opacity 500ms ease-out}
+.tv-picture[data-has-img] .backdrop{opacity:1}
+.tv-picture::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(0deg,rgba(8,8,9,.92) 0%,rgba(8,8,9,.55) 34%,transparent 60%)}
+.top{grid-row:1}.stage{grid-row:2}.lower3{grid-row:3}.band{grid-row:4}
+
+/* ---------- 顶部：台标 + 状态，右边时钟 ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:2em;min-height:3.4em}
+.bug{display:flex;align-items:center;gap:1.1em}
+.logo{display:flex;align-items:center;gap:.55em;font-size:1.45em;font-weight:700;letter-spacing:.12em}
+.logo::before{content:"";width:.7em;height:.7em;border-radius:.16em;background:var(--accent)}
+.state{display:flex;align-items:center;gap:.5em;font-size:1.15em;font-weight:600;letter-spacing:.16em;color:var(--ink-2)}
+.state::before{content:"";width:.5em;height:.5em;border-radius:50%;background:var(--live)}
+.state[data-kind="paused"]{color:var(--accent)}
+.state[data-kind="paused"]::before{width:.45em;height:.6em;border-radius:0;background:none;
+  border-left:.16em solid currentColor;border-right:.16em solid currentColor}
+.clock{font-size:1.6em;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.clock small{margin-left:.6em;font-size:.62em;font-weight:500;letter-spacing:.14em;color:var(--ink-dim)}
+.rail{position:absolute;left:4em;right:4em;top:6.4em;display:flex;gap:.5em}
+.rail i{flex:1;height:.22em;border-radius:.2em;background:rgba(255,255,255,.14);overflow:hidden}
+.rail i b{display:block;height:100%;background:var(--ink);transform-origin:0 50%;transform:scaleX(0)}
+
+/* ---------- 画面主体：这条内容的图，完整显示不裁切 ---------- */
+.stage{position:relative;min-height:0}
+.stage img{position:absolute;inset:2.4em 0 2em;margin:auto;max-width:100%;max-height:calc(100% - 4.4em);width:auto;height:auto;border-radius:.8em;
+  box-shadow:0 2em 5em rgba(0,0,0,.55),0 0 0 .1em rgba(255,255,255,.08);
+  opacity:0;transition:opacity 400ms ease-out}
+.stage img[data-ready]{opacity:1}
+.tv-picture:not([data-has-img]) .stage img{display:none}
+
+/* ---------- 标题和字幕 ---------- */
+.lower3{padding-bottom:2.4em}
+.meta{display:flex;align-items:center;gap:.9em;font-size:1.2em;letter-spacing:.06em;color:var(--ink-2)}
+.meta .src{color:var(--accent);font-weight:700;letter-spacing:.1em}
+.meta .stat{font-variant-numeric:tabular-nums}
+.meta span + span::before{content:"·";margin-right:.9em;color:var(--ink-dim)}
+.open{margin-left:auto;color:var(--ink);text-decoration:none;letter-spacing:.08em;padding:.38em .95em;border-radius:999px;
+  background:rgba(255,255,255,.08);box-shadow:0 0 0 1px rgba(255,255,255,.2) inset;white-space:nowrap;
+  transition:transform 140ms var(--ease-out),background 150ms ease-out}
+.open:active{transform:scale(.97)}
+@media (hover:hover) and (pointer:fine){.open:hover{background:rgba(255,255,255,.16)}}
+.headline{display:block;margin-top:.4em;color:var(--ink);text-decoration:none;font-size:3.3em;line-height:1.18;
+  font-weight:800;letter-spacing:-.01em;max-width:26em;text-wrap:balance;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (hover:hover) and (pointer:fine){a.headline:hover{text-decoration:underline;text-decoration-thickness:.05em;
+  text-underline-offset:.15em;text-decoration-color:rgba(255,255,255,.4)}}
+.sub{display:flex;align-items:baseline;gap:1em;margin-top:1em;max-width:70em;min-height:3em}
+.sub .lab{flex:none;font-size:1.1em;letter-spacing:.14em;color:var(--ink-dim);white-space:nowrap}
+.sub .txt{font-size:1.8em;line-height:1.5;color:var(--ink);text-wrap:pretty}
+.sub[data-part="take"] .lab,.sub[data-part="take"] .txt{color:var(--accent)}
+.sub[data-part="take"] .txt{font-weight:600}
+
+/* 没有图的条目：只用文字，标题放大，放在画面中间偏下 */
+.tv-picture:not([data-has-img]) .lower3{grid-row:2 / 4;align-self:center;padding-bottom:0}
+.tv-picture:not([data-has-img]) .stage{display:none}
+.tv-picture:not([data-has-img]) .headline{font-size:5.2em;max-width:16em;-webkit-line-clamp:3}
+.tv-picture:not([data-has-img]) .sub{margin-top:1.6em}
+.tv-picture:not([data-has-img]) .sub .txt{font-size:2.3em}
+
+/* ---------- 底部：一行朴素的「接下来」 ---------- */
+.band{position:relative;display:flex;align-items:center;gap:1.6em;height:4.6em;margin:0 -4em;padding:0 4em;
+  border-top:1px solid rgba(255,255,255,.1);font-size:1em}
+.band .prog{position:absolute;left:0;right:0;top:-1px;height:1px}
+.band .prog i{display:block;height:100%;background:rgba(255,255,255,.55);transform-origin:0 50%;transform:scaleX(0)}
+.band .tag{flex:none;font-size:1.2em;letter-spacing:.16em;color:var(--ink-dim)}
+.band .lane{position:relative;flex:1;overflow:hidden;
+  mask-image:linear-gradient(90deg,transparent,#000 3%,#000 95%,transparent);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 95%,transparent)}
+.band .track{display:flex;white-space:nowrap;will-change:transform;font-size:1.25em;color:var(--ink-2)}
+.band .track span{padding:0 1.2em}
+.band .track span b{color:var(--ink-dim);font-weight:500;margin-right:.6em}
+.band .track span::after{content:"·";margin-left:2.4em;color:var(--ink-dim)}
+
+/* ---------- 点一下收听：画面正中 ---------- */
+.listen{position:absolute;left:50%;top:42%;z-index:6;transform:translate(-50%,-50%);border:0;font:inherit;cursor:pointer;
+  display:flex;align-items:center;gap:.8em;padding:1em 1.8em 1em 1.5em;border-radius:999px;
+  font-size:1.9em;font-weight:700;letter-spacing:.1em;color:#140e04;background:var(--accent);
+  box-shadow:0 .8em 2.4em rgba(0,0,0,.5),0 0 0 .5em rgba(255,181,71,.2);
+  transition:transform 160ms var(--ease-out),opacity 200ms ease-out,box-shadow 200ms ease-out}
+.listen svg{width:1.15em;height:1.15em}
+.listen:active{transform:translate(-50%,-50%) scale(.97)}
+@media (hover:hover) and (pointer:fine){.listen:hover{box-shadow:0 .8em 2.4em rgba(0,0,0,.5),0 0 0 .7em rgba(255,181,71,.26)}}
+.listen:focus-visible{outline:2px solid #fff;outline-offset:4px}
+.tv-picture:not([data-muted]) .listen{opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.96)}
+
+/* ---------- 暂停 ---------- */
+.golive{position:absolute;right:4em;bottom:7em;z-index:5;border:0;font:inherit;cursor:pointer;
+  display:flex;align-items:center;gap:.6em;padding:.75em 1.3em;border-radius:999px;font-size:1.3em;letter-spacing:.12em;
+  color:#fff;background:var(--live);box-shadow:0 .5em 1.6em rgba(255,59,48,.35);
+  opacity:0;transform:translateY(.5em) scale(.96);pointer-events:none;
+  transition:opacity 180ms ease-out,transform 220ms var(--ease-out)}
+.golive::before{content:"";width:.5em;height:.5em;border-radius:50%;background:#fff}
+.golive:active{transform:scale(.97)}
+.tv-picture[data-paused] .golive{opacity:1;transform:none;pointer-events:auto}
+.tv-picture[data-paused] .stage{filter:saturate(.5) brightness(.7);transition:filter 200ms ease-out}
+
+.caught{grid-row:2 / 4;align-self:center;text-align:center}
+.caught b{display:block;font-size:6em;font-weight:800;letter-spacing:.04em}
+.caught small{display:block;margin-top:.6em;font-size:1.8em;color:var(--ink-2)}
+
+/* 竖屏手机：左右边距收窄 */
+@container (max-aspect-ratio: 1/1){
+  .tv-picture{padding:2.6em 3em 0;font-size:2.4cqw}
+  .rail{left:3em;right:3em}
+  .band{margin:0 -3em;padding:0 3em}
+}
+@media (prefers-reduced-motion:reduce){
+  .listen,.golive{transition:opacity 150ms ease}
+}
+.rank{display:inline-block;margin-top:.9em;font-size:1.25em;font-weight:600;padding:.25em .7em;border-radius:.4em;color:var(--ink-2);background:rgba(255,255,255,.08);font-variant-numeric:tabular-nums}
+.meta .age{color:#ffcf6b;font-variant-numeric:tabular-nums}
