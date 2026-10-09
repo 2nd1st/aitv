@@ -1,5 +1,6 @@
 // 时钟、节目单、音频（沃兹）。画面交给 screen/tv.js（艾维）。
 import { createTV } from "/screen/tv.js";
+import { locate, pick, adopt } from "/timeline.js";
 
 // 校时：测 7 次往返，取往返最短的那次，偏差 = 服务器时间 - 本地中点
 async function syncClock() {
@@ -15,15 +16,6 @@ async function syncClock() {
   return samples[0];
 }
 
-function locate(s, nowMs) {
-  const pos = (((nowMs - s.anchor) % s.total) + s.total) % s.total;
-  for (let i = 0; i < s.items.length; i++) {
-    const st = s.items[i].start - s.anchor, en = st + s.items[i].duration * 1000;
-    if (pos >= st && pos < en) return { i, t: (pos - st) / 1000 };
-  }
-  return { i: 0, t: 0 };
-}
-
 async function loadSchedule() {
   for (let k = 0; ; k++) {
     try {
@@ -33,16 +25,18 @@ async function loadSchedule() {
     await new Promise((ok) => setTimeout(ok, Math.min(30000, 2000 * 2 ** k)));
   }
 }
-let [clock, schedule] = await Promise.all([syncClock(), loadSchedule()]);
+let [clock, body] = await Promise.all([syncClock(), loadSchedule()]);
+// state = { current, next, switchAt }：到 switchAt（条目边界，所有设备同一个服务器时钟）才换成 next，不会在一条中间切
+let state = adopt(body);
 const now = () => performance.timeOrigin + performance.now() + clock.offset;
-window.__aitv = { get clock() { return clock; }, get schedule() { return schedule; }, now, locate: () => locate(schedule, now()) };
 
-// 每分钟重新校时；顺便看节目单版本，换版了就接上新版（指针切换 / 回滚不用刷新页面）
+// 每分钟重新校时 + 拉节目单。服务器保证 switchAt 至少在 90 秒后，所以切换前一定能拿到 next。
+// 紧急下架时服务器直接换 current（没有 next），这里照收，下一帧就切。
 setInterval(async () => {
   try { const c = await syncClock(); if (c.rtt < 1500) clock = c; } catch {}
   try {
     const r = await fetch("/api/schedule", { cache: "no-store" });
-    if (r.ok) { const s = await r.json(); if (s.version && s.version !== schedule.version) schedule = s; }
+    if (r.ok) state = adopt(await r.json());
   } catch {}
 }, 60000);
 
@@ -60,19 +54,31 @@ function audioFor(item) {
   }
   return cache.get(item.audio);
 }
-function prefetchAround(i) {
-  const n = schedule.items.length;
-  audioFor(schedule.items[i]); audioFor(schedule.items[(i + 1) % n]);
+// 从时刻 ms 起往后数 k 条（跨 switchAt 时自动换成 next 的条目）
+function walk(ms, k) {
+  const out = [];
+  let cur = ms;
+  for (let j = 0; j < k; j++) {
+    const s = pick(state, cur), { i, t } = locate(s, cur), it = s.items[i];
+    if (!it) break;
+    out.push(it);
+    cur += Math.max(1, Math.round((it.duration - t) * 1000)); // 跳到这条结束（= 下一条开始）
+  }
+  return out;
 }
-prefetchAround(locate(schedule, now()).i);
+const prefetchAround = (ms) => walk(ms, 2).forEach(audioFor);
+prefetchAround(now());
 
 // 本地时间线：直播位置 = 服务器时间；暂停后继续会落后直播 lag 毫秒，「回到直播」清零。
 let paused = false, frozenAt = 0, lag = 0;
 const vnow = () => (paused ? frozenAt : now() - lag);
+// 此刻（本地时间线上）在播的条目
+function here(ms = vnow()) { const s = pick(state, ms); const { i, t } = locate(s, ms); return { s, i, t, item: s.items[i] }; }
+window.__aitv = { get clock() { return clock; }, get state() { return state; }, get schedule() { return pick(state, now()); }, now, locate: () => { const h = here(now()); return { i: h.i, t: h.t, version: h.s.version, id: h.item?.id }; } };
 // 这条音频此刻应该在第几秒（按服务器时钟现算；不在这条上了返回 null）
 function targetT(audio) {
-  const { i, t } = locate(schedule, vnow());
-  return schedule.items[i].audio === audio ? t : null;
+  const { item, t } = here();
+  return item?.audio === audio ? t : null;
 }
 
 // 定位：元数据没到之前设 currentTime 会被浏览器忽略（iOS 尤甚）。
@@ -97,7 +103,7 @@ function syncAudio(item, t) {
     if (a.readyState >= 1) a.currentTime = Math.max(0, t);
     a.play().catch(() => {});      // 开机那次点击里同步调用，保住手势
     seekWhenReady(a, item.audio);
-    prefetchAround(schedule.items.indexOf(item));
+    prefetchAround(vnow());
     return;
   }
   // 暂停后继续：从时间线上的位置接着放
@@ -127,46 +133,43 @@ function resume() {
   lag = now() - frozenAt;   // 从暂停处接着播
   paused = false;
   tv.setPaused(false);
-  const { i, t } = locate(schedule, vnow());
-  syncAudio(schedule.items[i], t);
+  const { item, t } = here();
+  syncAudio(item, t);
 }
 function goLive() {
   paused = false; lag = 0;  // 按服务器时钟重新定位到直播
   tv.setPaused(false);
-  const { i, t } = locate(schedule, vnow());
-  if (on) syncAudio(schedule.items[i], t);
+  const { item, t } = here();
+  if (on) syncAudio(item, t);
 }
 
+// 第一次点击里同步起播（保住手势）。screen-v4 叫 onListen，旧画面叫 onPower，两个都给。
+function listen() {
+  on = true;
+  tv?.setMuted?.(false);
+  const { item, t } = here();
+  syncAudio(item, t);
+}
 const tv = createTV(document.getElementById("root"), {
-  onPower: () => {
-    on = true;
-    // 这次点击里起播，开机雪花盖住起播
-    const { i, t } = locate(schedule, vnow());
-    syncAudio(schedule.items[i], t);
-  },
+  onListen: listen,
+  onPower: listen,
   onScreenClick: () => (paused ? resume() : pause()),
   onGoLive: goLive,
 });
 
 // 底部滚动条：接下来的几条
-function upcoming(i, k = 5) {
-  const n = schedule.items.length, out = [];
-  for (let j = 1; j <= Math.min(k, n - 1); j++) {
-    const it = schedule.items[(i + j) % n];
-    out.push({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source });
-  }
-  return out;
+function upcoming(ms, k = 5) {
+  return walk(ms, k + 1).slice(1).map((it) => ({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source }));
 }
 
 function frame() {
   const n = vnow();
-  const { i, t } = locate(schedule, n);
-  const item = schedule.items[i];
+  const { item, t } = here(n);
   if (on && !paused) syncAudio(item, t);
   // 暂停时画面定格；时钟仍走服务器时间
-  tv.render(item, t, now(), { mode: "live", upcoming: upcoming(i) });
+  tv.render(item, t, now(), { mode: "live", upcoming: upcoming(n) });
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 window.__aitv.player = { pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
-  drift() { const a = playing?.audio; if (!a) return null; const { t } = locate(schedule, vnow()); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };
+  drift() { const a = playing?.audio; if (!a) return null; const { t } = here(); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };

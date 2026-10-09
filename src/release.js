@@ -67,29 +67,33 @@ export function migrateTakedown(td) {
     if (h) { hashes.add(h); if (oldId && !refs[h]) refs[h] = oldId; }
     else { audio.add(a); if (oldId && !refs[a]) refs[a] = oldId; }
   }
-  return { hashes: [...hashes], audio: [...audio], refs, ...(td.updatedAt ? { updatedAt: td.updatedAt } : {}) };
+  return { hashes: [...hashes], audio: [...audio], refs, effectiveAt: { ...(td.effectiveAt || {}) }, ...(td.updatedAt ? { updatedAt: td.updatedAt } : {}) };
 }
-export function takedownMatches(td, it) {
+// effectiveAt[hash|audio] = 毫秒时间戳：读节目单时到点才过滤（普通下架 = 时间线的 switchAt，届时 next 里已经没有它，
+// 不会再重排；紧急下架 = 立刻）。没写的视为一直生效。
+const live = (t, key, nowMs) => nowMs == null || !(t.effectiveAt?.[key] > nowMs);
+export function takedownMatches(td, it, nowMs) {
   if (!td || !it) return false;
   const t = td.ids ? migrateTakedown(td) : td;
   const h = scriptHashOf(it);
-  return (!!h && (t.hashes || []).includes(h)) || (!!it.audio && (t.audio || []).includes(it.audio));
+  return (!!h && (t.hashes || []).includes(h) && live(t, h, nowMs)) || (!!it.audio && (t.audio || []).includes(it.audio) && live(t, it.audio, nowMs));
 }
-export function applyTakedown(items, td) {
-  return (items || []).filter((it) => !takedownMatches(td, it));
+export function applyTakedown(items, td, nowMs) {
+  return (items || []).filter((it) => !takedownMatches(td, it, nowMs));
 }
 // entry：{ hash } 或 { audio }（旧版地址），id 只记在 refs 里
-export function addTakedown(td, { hash, audio, id } = {}) {
+export function addTakedown(td, { hash, audio, id, effectiveAt } = {}) {
   const t = migrateTakedown(td);
-  const hashes = new Set(t.hashes), aud = new Set(t.audio), refs = { ...t.refs };
-  if (hash) { if (!HASH_RE.test(hash)) throw new Error(`不是稿子 hash：${hash}`); hashes.add(hash); if (id) refs[hash] = id; }
-  if (audio) { const h = scriptHashOf({ audio }); if (h) { hashes.add(h); if (id) refs[h] = id; } else { aud.add(audio); if (id) refs[audio] = id; } }
-  return { hashes: [...hashes], audio: [...aud], refs, updatedAt: new Date().toISOString() };
+  const hashes = new Set(t.hashes), aud = new Set(t.audio), refs = { ...t.refs }, eff = { ...t.effectiveAt };
+  const mark = (k) => { if (id) refs[k] = id; if (effectiveAt != null) eff[k] = effectiveAt; else delete eff[k]; };
+  if (hash) { if (!HASH_RE.test(hash)) throw new Error(`不是稿子 hash：${hash}`); hashes.add(hash); mark(hash); }
+  if (audio) { const h = scriptHashOf({ audio }); if (h) { hashes.add(h); mark(h); } else { aud.add(audio); mark(audio); } }
+  return { hashes: [...hashes], audio: [...aud], refs, effectiveAt: eff, updatedAt: new Date().toISOString() };
 }
 export function removeTakedown(td, { hash, audio } = {}) {
   const t = migrateTakedown(td);
-  const refs = { ...t.refs }; delete refs[hash]; delete refs[audio];
-  return { hashes: t.hashes.filter((x) => x !== hash), audio: t.audio.filter((a) => a !== audio), refs, updatedAt: new Date().toISOString() };
+  const refs = { ...t.refs }, eff = { ...t.effectiveAt }; delete refs[hash]; delete refs[audio]; delete eff[hash]; delete eff[audio];
+  return { hashes: t.hashes.filter((x) => x !== hash), audio: t.audio.filter((a) => a !== audio), refs, effectiveAt: eff, updatedAt: new Date().toISOString() };
 }
 // 作废的版本记在指针元数据 pointer.void 里：use / rollback 都拒绝切到作废版本（第二道保险）。
 export const isVoid = (ptr, v) => Array.isArray(ptr?.void) && ptr.void.includes(v);

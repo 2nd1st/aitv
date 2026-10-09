@@ -55,6 +55,17 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 - `screen/`：画面，艾维负责，只暴露 `render(item, t)`。
 - `public/`：静态页。
 
+### 全局时钟：switchAt（所有设备同一个边界换节目单）
+
+- KV `timeline` = `{ current, next, switchAt }`（`src/timeline.js`，客户端和 Worker 共用 `public/timeline.js` 的 `locate / pick`）。
+- 切版本（`use`）、回滚、下架、定时任务插新条 / 超过 6 小时的条目下线，都不立刻换：算 `switchAt` =「现在 + 90 秒」之后 current 的第一个条目边界。
+  之前 `/api/schedule` 照旧给 current，同时带上 `next` 和 `switchAt`；客户端每 60 秒拉一次，到 `switchAt` 按校准后的服务器时钟一起换，谁都不会在一条中间被切。
+- 续播：新时间线从「switchAt 那一刻本该开始的那条」接着排（被删的跳过）；定时任务的新条目插在它前面，也就是紧跟在当前在播的那条后面。
+- 紧急下架 `node scripts/release.mjs takedown <id|hash> --now`：立刻生效，正在播的那条也切掉。普通下架的名单条目带 `effectiveAt = switchAt`，到点才过滤。
+- 上一次切换离生效不足 90 秒时拒绝再排（等它过了再来）；离得远就替换掉 next、沿用同一个 switchAt。
+- `/api/schedule` 顶层的 `anchor / total / items` = current，兼容没刷新的旧页面。`release.mjs timeline` 查看，`timeline-init` 按此刻实际在播的初始化（播放位置不变）。
+- 注意：KV 写入全球可见最长约 60 秒 + 客户端 60 秒轮询，极端情况下个别设备会晚于 switchAt 才拿到 next，此时它会立刻跳到新时间线的正确位置（与大家对齐，但那一条会从中间开始）。
+
 ## item 契约（screen 只认这些）
 ```json
 {
