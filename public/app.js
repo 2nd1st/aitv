@@ -121,7 +121,7 @@ function syncAudio(item, t) {
   if (!playing || playing.audio !== a) {
     if (playing) playing.audio.pause();
     playing = { id: item.id, audio: a };
-    const rec = { id: item.id, at: now(), ready: a.readyState, primed: primed?.audio === a };
+    const rec = { id: item.id, kind: playing ? "switch" : "start", at: now(), ready: a.readyState, primed: primed?.audio === a };
     switchLog.push(rec); if (switchLog.length > 20) switchLog.shift();
     a.addEventListener("playing", () => { rec.playingAt = now(); rec.stallMs = Math.round(rec.playingAt - rec.at); }, { once: true });
     // 预加载好的那条已经停在正确位置：差得不多就不 seek（seek 本身要等几百毫秒），直接放，漂移交给后面的校正
@@ -207,9 +207,25 @@ function showAge(item) {
   if (ageTag.textContent !== txt) { ageTag.textContent = txt; ageTag.style.display = txt ? "" : "none"; }
 }
 
+// 离条目边界还有 30 秒时再确认一次下一条的音频在缓冲（readyState < 3 就 load()），换条时不等网络。
+// 平时换条那一刻已经预取了下一条；这里兜住浏览器丢了预取 / 缓存被挤掉的情况。
+let lastWarm = 0;
+function warmNext(ms) {
+  const p = performance.now();
+  if (p - lastWarm < 1000) return;
+  lastWarm = p;
+  const { item, t } = here(ms);
+  if (!item || item.duration - t > 30) return;
+  const nx = walk(ms, 2)[1];
+  if (!nx || nx.audio === item.audio) return;
+  const a = audioFor(nx);
+  if (a.readyState < 3 && a.networkState !== 2 /* 没在加载 */) a.load();
+}
+
 function frame() {
   const n = vnow();
   const { item, t } = here(n);
+  if (!paused) warmNext(n);
   showAge(item);
   if (!paused) { if (on || !warmBlocked) syncAudio(item, t); else positionOnly(item, t); }
   // 暂停时画面定格；时钟仍走服务器时间
