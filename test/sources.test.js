@@ -65,7 +65,7 @@ test("一个源挂了，别的源照常出", async () => {
     if (url.includes("github.com")) return new Response(fx("gh-trending.html"));
     return new Response(fx("aihot.json"));
   };
-  const r = await fetchAll({ fetchImpl: fake, now: T });
+  const r = await fetchAll({ fetchImpl: fake, now: T, sleep: async () => {} }); // 503 会重试两次，测试里不真等
   assert.match(r.errors.producthunt, /503/);
   assert.equal(Object.keys(r.errors).length, 1);
   assert.ok(r.items.length >= 9);

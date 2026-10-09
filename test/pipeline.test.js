@@ -285,7 +285,7 @@ test("RANKED_SOURCES 关掉 GitHub：候选没有发布时间 → skipped:no-pub
   assert.equal(x.calls.brief + x.calls.tts, 0);
 });
 
-test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到的时间；第二次看到不刷新，过了 6 小时就跳过", async () => {
+test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到的时间；第二次看到不刷新，过了 24 小时就跳过", async () => {
   const x = deps();
   const out = await runCron({ ...x.d, fetchAll: undefined, ranked: undefined }, {});
   assert.ok(out.log.some((l) => l.startsWith("新条目 gh-")), out.log.join("\n"));
@@ -295,7 +295,57 @@ test("RANKED_SOURCES 开着（默认）：GitHub 按第一次在 trending 看到
   assert.equal(st.item.rankedAt, T0);
   await x.kv.put("pipe:index", { seen: [] });
   await x.kv.delete(`pipe:item:${ID}`);
-  const later = await runCron({ ...x.d, fetchAll: undefined, ranked: undefined, now: T0 + 7 * 3600_000 }, { maxNewPerDay: 40 });
+  const later = await runCron({ ...x.d, fetchAll: undefined, ranked: undefined, now: T0 + 25 * 3600_000 }, { maxNewPerDay: 40 });
   assert.equal((await x.kv.get("rank:firstSeen"))[ID].first, T0);
   assert.ok((await x.kv.get("pipe:index")).skipped.some((s) => s.id === ID && s.why === "stale"), later.log.join("\n"));
+});
+
+// ---------- 2026-10-09 第二批：榜单 24 小时、每轮最多 2 条、按墙钟留余量 ----------
+import { newPerRun, MAX_NEW_PER_RUN, STEP_BACK_AT, STEP_MAX_MS } from "../src/pipeline.js";
+
+test("榜单类（PH / GitHub）从 rankedAt 起 24 小时有效、不当补位；文章仍是 6 / 12 小时", () => {
+  const r = (id, h, source = "Product Hunt") => ({ id, source, audio: `/audio/${id.padEnd(16, "0")}.mp3`, duration: 20, fetchedAt: T0, rankedAt: ago(h) });
+  const a = (id, h) => ({ id, source: "Hacker News", audio: `/audio/${id.padEnd(16, "0")}.mp3`, duration: 20, fetchedAt: T0, publishedAt: ago(h) });
+  const out = dropOld([r("ph20", 20), r("gh13", 13, "GitHub Trending"), r("ph25", 25), a("hn3", 3), a("hn9", 9), a("hn13", 13)], T0).map((x) => x.id);
+  assert.deepEqual(out, ["ph20", "gh13", "hn3", "hn9"]);   // 榜单 24 小时内都算新鲜；25 小时的哪怕不足 15 条也下；文章 9 小时当补位
+});
+
+test("每轮新上：在播有效条目 < 12 → 2 条；>= 12 → 1 条（常量）", () => {
+  assert.equal(MAX_NEW_PER_RUN, 2); assert.equal(STEP_BACK_AT, 12);
+  assert.equal(newPerRun(0), 2); assert.equal(newPerRun(11), 2); assert.equal(newPerRun(12), 1); assert.equal(newPerRun(30), 1);
+});
+
+const readyItem = (id, take) => ({ ...onAir[0], id, source: "Hacker News", publishedAt: T0 - 1800_000, audio: `/audio/${id.padEnd(16, "0")}.mp3`, take });
+async function withReady(nFresh, ids) {
+  const items = onAir.slice(0, nFresh);
+  const tl = { current: { version: "v1", ...buildSchedule(items, T0 - 600_000) }, next: null, switchAt: null };
+  const kv = memKV({ timeline: tl, "pipe:index": { ready: ids, seen: [] } });
+  for (const [i, id] of ids.entries()) await kv.put(`pipe:item:${id}`, { id, status: "ready", seedItem: readyItem(id, `${"一二三"[i]}号新条目的点评`) });
+  const x = deps({ kv });
+  const out = await runCron(x.d, { autoPublish: true, maxNewPerDay: 0 });
+  return { out, tl: await kv.get("timeline"), idx: await kv.get("pipe:index") };
+}
+test("在播有效 5 条：一轮上 2 条新的（经 switchAt），12 条起退回 1 条", async () => {
+  const a = await withReady(5, ["n1", "n2", "n3"]);
+  assert.deepEqual(a.out.plan.inserted, ["n1", "n2"], a.out.log.join("\n"));
+  assert.deepEqual(a.tl.next.items.slice(0, 2).map((x) => x.id), ["n1", "n2"]);
+  assert.ok(a.tl.switchAt >= T0 + 150_000);
+  assert.deepEqual(a.idx.ready, ["n3"]);
+  const b = await withReady(12, ["n1", "n2"]);
+  assert.deepEqual(b.out.plan.inserted, ["n1"], b.out.log.join("\n"));
+  assert.deepEqual(b.idx.ready, ["n2"]);
+});
+
+test("一轮开 2 条新候选（有效条目少时）", async () => {
+  const tl = { current: { version: "v1", ...buildSchedule(onAir.slice(0, 3), T0 - 600_000) }, next: null, switchAt: null };
+  const x = deps({ kv: memKV({ timeline: tl, "pipe:index": { seen: [] } }) });
+  const out = await runCron(x.d, { maxNewPerDay: 40 });
+  assert.equal(out.log.filter((l) => l.startsWith("新条目")).length, 2, out.log.join("\n"));
+});
+
+test("墙钟：剩下的时间不够跑完这一步就不开（留给下一轮），不会超过 cron 的 15 分钟", async () => {
+  const x = deps();
+  const st0 = { id: "z", item: { id: "z", source: "Hacker News", publishedAt: T0 }, step: "script", status: "pending", results: { brief: BRIEF }, tries: {}, errors: [] };
+  const st = await advance(st0, x.d, { deadline: Date.now() + STEP_MAX_MS.script - 1000 });
+  assert.equal(st.status, "pending"); assert.equal(st.step, "script"); assert.equal(x.calls.script, 0);
 });

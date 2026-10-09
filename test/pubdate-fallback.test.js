@@ -100,4 +100,6 @@ test("流水线：RSS 兜底拿到的日期超过 6 小时 → skipped:stale，�
   const st = await advance({ id: it.id, item: it, step: "read", status: "pending", results: {}, tries: {}, errors: [] },
     { now: T, fetch: site(), briefLLM: async () => { calls++; return "{}"; } });
   assert.equal(st.status, "skipped"); assert.match(st.why, /^stale/); assert.equal(calls, 0);
+  // 日志里要看得到读出来的日期（以前记成 null）
+  assert.equal(st.item.publishedAt, Date.parse("Thu, 08 Oct 2026 16:00:00 GMT")); assert.equal(st.item.pubDateSource, "rss");
 });

@@ -48,3 +48,14 @@ export function annotate(it, ranked = DEFAULT_SET) {
   if (kind === "ranked") out.rankedAt = t; else delete out.rankedAt;
   return out;
 }
+
+// 有效期（产品 2026-10-09）：文章 6 小时新鲜、6–12 小时可当补位、12 小时以上下线；
+// 榜单（dateKind ranked）从 rankedAt 起 24 小时有效（PH：今天 15:00 结束的榜到明天 15:00），不当补位，24 小时一到就下。
+export const ARTICLE_FRESH_MS = 6 * 3600_000, ARTICLE_FILLER_MS = 12 * 3600_000, RANKED_VALID_MS = 24 * 3600_000;
+export function windowOf(it, ranked = DEFAULT_SET) {
+  return timeOf(it, ranked).kind === "ranked" ? { fresh: RANKED_VALID_MS, filler: null } : { fresh: ARTICLE_FRESH_MS, filler: ARTICLE_FILLER_MS };
+}
+// 是否在新鲜期内（未知时间 = 不新鲜）
+export const isFresh = (it, now, ranked) => ageOf(it, now, ranked) <= windowOf(it, ranked).fresh;
+// 是否可当补位（只有文章，6–12 小时）
+export const isFiller = (it, now, ranked) => { const w = windowOf(it, ranked), a = ageOf(it, now, ranked); return w.filler != null && a > w.fresh && a <= w.filler; };
