@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>AI News &amp; Artificial Intelligence | TechCrunch</title>
+	<atom:link href="https://techcrunch.com/category/artificial-intelligence/feed/" rel="self" type="application/rss+xml" />
+	<link>https://techcrunch.com/category/artificial-intelligence/</link>
+	<description>Startup and Technology News</description>
+	<lastBuildDate>Fri, 09 Oct 2026 02:36:05 +0000</lastBuildDate>
+	<language>en-US</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=6.9.10</generator>
+
+<image>
+	<url>https://techcrunch.com/wp-content/uploads/2015/02/cropped-cropped-favicon-gradient.png?w=32</url>
+	<title>AI News &amp; Artificial Intelligence | TechCrunch</title>
+	<link>https://techcrunch.com/category/artificial-intelligence/</link>
+	<width>32</width>
+	<height>32</height>
+</image> 
+	<item>
+		<title>Popular AI leaderboard Arena nearly doubles valuation to $3.1B valuation in 10 months</title>
+		<link>https://techcrunch.com/2026/10/08/popular-ai-leaderboard-arena-nearly-doubles-valuation-to-3-1b-valuation-in-10-months/</link>
+		
+		<dc:creator><![CDATA[Julie Bort]]></dc:creator>
+		<pubDate>Thu, 08 Oct 2026 18:19:45 +0000</pubDate>
+				<category><![CDATA[AI]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<category><![CDATA[Startups]]></category>
+		<category><![CDATA[TC]]></category>
+		<category><![CDATA[AI leaderboard]]></category>
+		<category><![CDATA[Arena AI]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=3175734</guid>
+
+					<description><![CDATA[The company behind the popular LMArena leaderboard has raised $200 million led by Lightspeed and Khosla, and is now measuring AI models on alignment issues such as lying.]]></description>
+		
+		
+		
+			</item>
+	<item>
+		<title>Cal AI&#8217;s 19-year-old founder just raised $10M for his new AI startup</title>
+		<link>https://techcrunch.com/2026/10/08/cal-ais-19-year-old-founder-just-raised-10m-for-his-new-ai-startup/</link>
+		
+		<dc:creator><![CDATA[Julie Bort]]></dc:creator>
+		<pubDate>Thu, 08 Oct 2026 14:00:00 +0000</pubDate>
+				<category><![CDATA[AI]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<category><![CDATA[Startups]]></category>
+		<category><![CDATA[TC]]></category>
+		<category><![CDATA[Exclusive]]></category>
+		<category><![CDATA[Zach Yadegari]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=3174041</guid>
+
+					<description><![CDATA[Zach Yadegari, the teen co-founder of popular Cal AI calorie tracking app, has launched a new personal AI agent startup that competes with Instinct, Muse, and Bee.]]></description>
+		
+		
+		
+			</item>
+	<item>
+		<title>Nous Research confirms it hit $1.5B valuation, launches AI agents for business users</title>
+		<link>https://techcrunch.com/2026/10/07/nous-research-confirms-it-hit-1-5b-valuation-launches-ai-agents-for-business-users/</link>
+		
+		<dc:creator><![CDATA[Marina Temkin]]></dc:creator>
+		<pubDate>Wed, 07 Oct 2026 20:48:45 +0000</pubDate>
+				<category><![CDATA[AI]]></category>
+		<category><![CDATA[Enterprise]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<category><![CDATA[Startups]]></category>
+		<category><![CDATA[AI agents]]></category>
+		<category><![CDATA[Hermes Agent]]></category>
+		<category><![CDATA[In Brief]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=3175337</guid>
+
+					<description><![CDATA[The developer of Hermes Agent raised a $90 million Series B. ]]></description>
+		
+		
+		
+			</item>
+	<item>
+		<title>China&#8217;s Manus raises over $500M in first funding round since split with Meta</title>
+		<link>https://techcrunch.com/2026/10/08/chinas-manus-raises-over-500m-in-first-funding-round-since-split-with-meta/</link>
+		
+		<dc:creator><![CDATA[Kate Park]]></dc:creator>
+		<pubDate>Thu, 08 Oct 2026 13:20:32 +0000</pubDate>
+				<category><![CDATA[AI]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<category><![CDATA[Startups]]></category>
+		<category><![CDATA[manus]]></category>
+		<category><![CDATA[Manus AI]]></category>
+		<category><![CDATA[Meta]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=3175521</guid>
+
+					<description><![CDATA[Boyu Capital and IDG Capital led the funding round, and existing shareholders Tencent, HSG (formerly known as Sequoia China), ZhenFund, and others also participated.]]></description>
+		
+		
+		
+			</item>
+	<item>
+		<title>Google brings agentic AI to Gemini, starting with businesses</title>
+		<link>https://techcrunch.com/2026/10/08/google-brings-agentic-ai-to-gemini-starting-with-businesses/</link>
+		
+		<dc:creator><![CDATA[Sarah Perez]]></dc:creator>
+		<pubDate>Thu, 08 Oct 2026 18:18:00 +0000</pubDate>
+				<category><![CDATA[AI]]></category>
+		<category><![CDATA[Enterprise]]></category>
+		<category><![CDATA[TC]]></category>
+		<category><![CDATA[gemini]]></category>
+		<category><![CDATA[Google]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=3175776</guid>
+
+					<description><![CDATA[Google is turning Gemini into an AI agent that can plan, execute tasks, and work across business apps and systems. The agent can delegate work to subagents, use multiple AI models, and even gets its own workplace identity, complete with an email address.]]></description>
+		
+		
+		
+			</item>
+	<item>
+		<title>5 days to TechCrunch Disrupt 2026: Don’t pay more at the door for your pass</title>
+		<link>https://techcrunch.com/2026/10/08/5-days-to-techcrunch-disrupt-2026-dont-pay-more-at-the-door/</link>
+		
+		<dc:creator><![CDATA[TechCrunch Events]]></dc:creator>
+		<pubDate>Thu, 08 Oct 2026 14:00:00 +0000</pubDate>
+				<category><![CDATA[Startups]]></category>
+		<category><![CDATA[Fintech]]></category>
+		<category><![CDATA[Venture]]></category>
+		<category><![CDATA[AI]]></category>
+		<category><![CDATA[Robotics]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<category><![CDATA[TechCrunch Disrupt]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=3175441</guid>
+
+					<description><![CDATA[The global tech ecosystem gathers at TechCrunch Disrupt 2026 at San Francisco’s Moscone West on October 13-15. Get your pass now to save up to $100. Get a second of the same ticket type to save 50%.]]></description>
+		
+		
+		
+			</item>
+	<item>
+		<title>Mistral AI raises new funding round to expand its frontier models</title>
+		<link>https://techcrunch.com/2026/10/08/synthetic-mistral-funding/</link>
+		<pubDate>Thu, 08 Oct 2026 12:00:00 +0000</pubDate>
+		<category><![CDATA[AI]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=9000001</guid>
+		<description><![CDATA[<p>SYNTHETIC fixture item (edited by hand, not from the live feed): the French model maker raised a new round from existing investors; no amount disclosed.</p>]]></description>
+	</item>
+	<item>
+		<title>Acme Robotics AI raises Series A to build warehouse agents</title>
+		<link>https://techcrunch.com/2026/10/08/synthetic-acme-series-a/</link>
+		<pubDate>Thu, 08 Oct 2026 11:00:00 +0000</pubDate>
+		<category><![CDATA[AI]]></category>
+		<category><![CDATA[Fundraising]]></category>
+		<guid isPermaLink="false">https://techcrunch.com/?p=9000002</guid>
+		<description><![CDATA[SYNTHETIC fixture item (edited by hand, not from the live feed): an AI startup funding story with no dollar amount stated.]]></description>
+	</item>
+	</channel>
+</rss>

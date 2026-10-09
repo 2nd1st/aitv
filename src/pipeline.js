@@ -18,7 +18,7 @@ import { reserveTTS } from "./ttscap.js";
 import { storeScreenedImage } from "./imagepick.js";
 import { mp3Duration } from "./mp3.js";
 import { planTimeline, effective, locate } from "./timeline.js";
-import { timeOf, ageOf as ageBy, parseRanked, SOURCE_KEY, phListEnd, windowOf, isFresh, FRESH_WINDOW_MS } from "./freshness.js";
+import { timeOf, newestFirst, ageOf as ageBy, parseRanked, SOURCE_KEY, phListEnd, windowOf, isFresh, FRESH_WINDOW_MS } from "./freshness.js";
 
 export const STEPS = ["read", "brief", "script", "validate", "tts"];
 export const MAX_STEP_TRIES = 3; // 网络 / 模型这类临时错误：同一步最多跑 3 次（跨轮）
@@ -36,7 +36,7 @@ class Stale extends Error {   // 过了新鲜期：跳过（skipped:stale），�
 // PH / GitHub 是榜单：按上榜时间（rankedAt，见 freshness.js，RANKED_SOURCES 开关），24 小时有效。
 export const STALE_MS = FRESH_WINDOW_MS;
 export const pubAge = (it, now, ranked) => { const { t } = timeOf(it || {}, ranked); return t == null ? null : now - t; };
-// 时间已知且过了新鲜期（文章 6 小时 / 榜单 24 小时）。时间未知的不在这里判（候选那步单独记 no-pubdate）
+// 时间已知且过了有效期（所有来源 72 小时，FRESH_WINDOW_MS）。时间未知的不在这里判（候选那步单独记 no-pubdate）
 export const isStale = (it, now, ranked) => { const a = pubAge(it, now, ranked); return a != null && a > windowOf(it || {}, ranked).fresh; };
 const staleWhy = (it, now, ranked) => { const { t, kind } = timeOf(it, ranked); return `stale：${kind === "ranked" ? "上榜" : "发布"}于 ${new Date(t).toISOString()}，已经 ${((now - t) / 3600e3).toFixed(1)} 小时（超过 ${windowOf(it, ranked).fresh / 3600e3} 小时）`; };
 
@@ -190,9 +190,9 @@ export async function advance(st, d, { save, deadline = Infinity } = {}) {
 // ---------- 上线（插进时间线），AUTO_PUBLISH 才真写 ----------
 // 规则（乔布斯 2026-10-09 签）：
 // - 每轮最多上一条新的；点评开头跟前后撞了就改写点评第一句（一条一天一次，改了要重新校验、重新合成、占额度）。
-// - 超过 6 小时的下线；不足 15 条时用 6–12 小时的旧条目补到 15（越新越先），超过 12 小时的一律下线，哪怕不足 15 条。
+// - 超过 72 小时的下线（乔木 2026-10-09 14:48 改：所有来源一个 72 小时窗口，没有补位和 15 条门槛）。
 //   15 条的门槛和兜底永远不挡新条目上线。全都不合格时保留最新的那一批在播条目，不出空节目单。
-// - use / rollback 之后（时间线里少了我们上过的条目），下一轮把 6 小时内、没下架的已完成条目全部插回来，
+// - use / rollback 之后（时间线里少了我们上过的条目），下一轮把 72 小时内、没下架的已完成条目全部插回来，
 //   音频按 hash 已在 R2，不再合成。全部经 switchAt。
 export const FRESH_MS = FRESH_WINDOW_MS;
 // 年龄按 publishedAt（来源的真实发布时间，产品 2026-10-09 定）；没有真实发布时间 = 未知 → 当作超龄下线，不拿抓取时间顶替。
@@ -320,12 +320,13 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
       await kv.put("rank:firstSeen", firstSeen);
       const onAir = new Set([...(eff?.current.items || []), ...(eff?.next?.items || [])].map((x) => x.id));
       const cands = interleave(dedupe(r.items, new Set([...idx.seen, ...onAir])));
-      // 先按发布时间筛：超过 6 小时的直接跳过（skipped:stale），不读原文、不做摘要、不合成
+      // 先按发布时间筛：超过 72 小时的直接跳过（skipped:stale），不读原文、不做摘要、不合成
       // 没有真实发布时间的（GitHub Trending）也跳过：上了也会在下一轮被下线（AIHOT 例外：读原文那步才拿日期）
       const noDate = (c) => timeOf(c, d.ranked).t == null && !c.dateUnknown;
       const stale = cands.filter((c) => isStale(c, now, d.ranked) || noDate(c));
-      const picks = cands.filter((c) => !stale.includes(c) && checkSafety(c).ok).slice(0, slots);
-      log.push(`抓到 ${r.items.length} 条，新候选 ${cands.length}，其中超过 6 小时 / 没有发布时间跳过 ${stale.length}${Object.keys(r.errors).length ? `，失败源 ${JSON.stringify(r.errors)}` : ""}`);
+      // 挑哪几条：按时间从新到旧（文章 publishedAt、榜单 rankedAt），免得 TechCrunch 这类量大的源把 PH / 厂商官方的挤掉
+      const picks = newestFirst(cands.filter((c) => !stale.includes(c) && checkSafety(c).ok), d.ranked).slice(0, slots);
+      log.push(`抓到 ${r.items.length} 条，新候选 ${cands.length}，其中超过 72 小时 / 没有发布时间跳过 ${stale.length}${Object.keys(r.errors).length ? `，失败源 ${JSON.stringify(r.errors)}` : ""}`);
       idx.skipped = [...(idx.skipped || []), ...stale.map((c) => ({ id: c.id, why: noDate(c) ? "no-pubdate" : "stale", publishedAt: c.publishedAt, at: now }))].slice(-300);
       for (const pick of picks) {
         const st = { id: pick.id, item: pick, step: "read", status: "pending", results: {}, tries: {}, errors: [], createdAt: now, updatedAt: now };
@@ -422,7 +423,7 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
           idx.published.push({ id, at: now });
           const st = await kv.get(`pipe:item:${id}`); st.status = "published"; st.airedAt = now; await kv.put(`pipe:item:${id}`, st);
         }
-        log.push(`时间线已更新：新上 ${p.inserted.join(",") || "无"}，插回 ${p.reinserted.length} 条，下线 ${p.dropped} 条，${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条${p.keptStale ? "（全部超过 12 小时，保留了最新一批）" : ""}`);
+        log.push(`时间线已更新：新上 ${p.inserted.join(",") || "无"}，插回 ${p.reinserted.length} 条，下线 ${p.dropped} 条，${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条${p.keptStale ? "（全部超过 72 小时，保留了最新 5 条）" : ""}`);
       } else log.push(`自动上线关闭；如果打开：${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条（新上 ${p.inserted.length}、插回 ${p.reinserted.length}、下线 ${p.dropped}）`);
     } else if (!p.noop) { plan = { refused: p.reason }; log.push(`时间线不动：${p.reason}`); }
     idx.last = { at: now, log, plan, autoPublish };
