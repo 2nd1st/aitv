@@ -5,3 +5,5 @@ node_modules/
 .venv/
 public/screen/
 releases/*/audio/
+audio-cache/
+screen/_sched.json
