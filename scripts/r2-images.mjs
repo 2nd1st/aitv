@@ -1,6 +1,6 @@
 // 构建时把条目的封面图转存到 R2（img/<key>），item.image 改成 /img/<key>；不行就 null。
 // 用法（单独跑）：node scripts/r2-images.mjs items.json   —— 原地改写 items.json
-// 需要 CLOUDFLARE_API_TOKEN（source /home/box/.cf_aitv.env）。build-items.mjs 最后也会调它。
+// 需要 CLOUDFLARE_API_TOKEN（设置自己的 Cloudflare 凭据）。build-items.mjs 最后也会调它。
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { storeScreenedImage } from "../src/imagepick.js";
 
 const BASE = process.env.AITV_BASE || "https://aitv.qiaomu.ai";
-const BUCKET = "aitv-audio";
+const BUCKET = process.env.AITV_BUCKET || "aitv-audio";
 
 // box 上的 R2 适配器（跟 R2 绑定同样的 head / put 形状）：head 走线上 /img/ 的 HEAD，put 走 wrangler r2 object put
 export function r2ImageStore() {

@@ -1,0 +1,4 @@
+# Optional; visual preview and tests do not need provider credentials.
+# Never commit .dev.vars with real values.
+DEEPSEEK_API_KEY=
+DOUBAO_TTS_ACCESS_TOKEN=

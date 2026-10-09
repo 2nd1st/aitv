@@ -1,4 +1,4 @@
-// 唯一的部署入口：npm run deploy（需要 source /home/box/.cf_aitv.env）。
+// 唯一的部署入口：npm run deploy（需要 设置自己的 Cloudflare 凭据）。
 // 闸门（scripts/guard.mjs）过了才构建并 wrangler deploy，并把当前提交注入 Worker（BUILD_COMMIT → /api/schedule 的 commit）。
 // 部署完以线上 /api/schedule 返回的 commit 为准：token 没有 zone 路由权限时 wrangler 会在上传成功后报 routes 错误并返回非零，
 // 这时只要线上 commit 已经是 HEAD 就算成功；对不上才算失败。

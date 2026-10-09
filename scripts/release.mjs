@@ -1,4 +1,4 @@
-// 发布 / 回滚节目单版本（详见 README「发布与回滚」）。需要 CLOUDFLARE_API_TOKEN（source /home/box/.cf_aitv.env）。
+// 发布 / 回滚节目单版本（详见 README「发布与回滚」）。需要 CLOUDFLARE_API_TOKEN（设置自己的 Cloudflare 凭据）。
 //   node scripts/release.mjs list               本地版本 + 线上指针
 //   node scripts/release.mjs check <version>    只校验本地 releases/<version>
 //   node scripts/release.mjs publish <version>  校验 → R2 里还没有的音频才上传（<hash>.mp3 + <hash>.json 时间轴）→ seed 写 KV（seed:<version>）。不切换。
@@ -24,7 +24,7 @@ import { buildSchedule } from "../src/schedule.js";
 
 const ROOT = new URL("../releases/", import.meta.url);
 const BASE = process.env.AITV_BASE || "https://aitv.qiaomu.ai";
-const BUCKET = "aitv-audio";
+const BUCKET = process.env.AITV_BUCKET || "aitv-audio";
 const wr = (...args) => execFileSync("npx", ["wrangler", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const kvGet = (key) => { try { return JSON.parse(wr("kv", "key", "get", "--binding", "SCHEDULE", key, "--remote").trim()); } catch { return null; } };
 const kvPutFile = (key, path) => wr("kv", "key", "put", "--binding", "SCHEDULE", key, "--path", path, "--remote");
