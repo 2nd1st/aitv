@@ -2,6 +2,8 @@
 
 一个全屏 WebView 壳，给不方便操作浏览器的设备（电视盒子、触屏音箱、旧手机）一个「点开就播」的入口。
 
+<img src="../docs/assets/android-legacy.png" width="480" alt="小米 LX04（Android 8.1 / Chrome 61）上的兼容版画面">
+
 - minSdk 21（Android 5.0），纯 Java + 系统 WebView，无 AndroidX / 第三方依赖
 - 系统 WebView 是 Chrome 105+：加载 `https://aitv.qiaomu.ai/`；更老：加载 `/legacy/` 兼容版
 - `/legacy/` 的页面文件（`public/legacy/`，由 `npm run build` 生成）打包进 APK，`shouldInterceptRequest` 同源返回；`/api/*`、`/audio/*`、`/img/*` 仍走线上
