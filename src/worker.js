@@ -3,6 +3,9 @@ import { serveImage } from "./images.js";
 import { buildSchedule } from "./schedule.js";
 import { applyTakedown } from "./release.js";
 import { effective } from "./timeline.js";
+import { runCron } from "./pipeline.js";
+import { makeDeepSeek } from "./llm.js";
+import { synthesize } from "./doubao.js";
 
 // 部署的是哪个提交：scripts/deploy.mjs 用 `wrangler deploy --define BUILD_COMMIT:"<sha>"` 在构建时注入；本地 / 测试里是 "dev"。
 /* global BUILD_COMMIT */
@@ -68,8 +71,33 @@ export default {
     if (url.pathname.startsWith("/img/")) return serveImage(req, env);
     return env.ASSETS.fetch(req);
   },
-  // 每 15 分钟：抓榜 → 写稿 → 校验 → 语音 → 出节目单。失败时保留上一份。
-  async scheduled(event, env, ctx) {
-    // TODO: 接包打听的抓取模块和豆包语音
+  // 定时流水线（src/pipeline.js）：每轮推进在途条目，额度 / 名额 / 自动上线都由 vars 控制（wrangler.toml）
+  async scheduled(event, env) {
+    const d = makeDeps(env, event.scheduledTime || Date.now());
+    try {
+      await runCron(d, {
+        maxNewPerDay: Number(env.PIPELINE_MAX_NEW_PER_DAY ?? 1),
+        autoPublish: env.AUTO_PUBLISH === "1",
+      });
+    } catch (e) {
+      await d.kv.put("pipe:error", { at: Date.now(), msg: String(e?.stack || e).slice(0, 1000) });
+    }
   },
 };
+
+// KV 存 JSON 的薄封装 + 各种外部依赖（测试里全换成假的）
+export function makeDeps(env, now = Date.now()) {
+  const kv = {
+    get: (k) => env.SCHEDULE.get(k, "json"),
+    put: (k, v, o) => env.SCHEDULE.put(k, JSON.stringify(v), o),
+    delete: (k) => env.SCHEDULE.delete(k),
+  };
+  const key = env.DEEPSEEK_API_KEY;
+  return {
+    now, kv, r2: env.AUDIO, fetch: (...a) => fetch(...a),
+    ttsCap: Number(env.TTS_DAILY_CAP ?? 40),
+    briefLLM: makeDeepSeek({ apiKey: key, model: env.BRIEF_MODEL || "deepseek-chat" }),
+    scriptLLM: makeDeepSeek({ apiKey: key, model: env.SCRIPT_MODEL || "deepseek-v4-pro", timeoutMs: 300_000 }),
+    tts: (payload) => synthesize(env.DOUBAO_TTS_ACCESS_TOKEN, payload),
+  };
+}

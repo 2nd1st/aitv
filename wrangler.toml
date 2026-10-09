@@ -17,6 +17,11 @@ id = "35456d05bca74c6390acb8af52f0ef89"
 binding = "AUDIO"
 bucket_name = "aitv-audio"
 
-# 以后：每 15 分钟跑一次流水线
-# [triggers]
-# crons = ["*/15 * * * *"]
+# 定时流水线（src/pipeline.js）：每 15 分钟一轮。密钥用 wrangler secret：DEEPSEEK_API_KEY、DOUBAO_TTS_ACCESS_TOKEN
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+AUTO_PUBLISH = "0"              # "1" 才把做好的条目插进时间线；现在只记计划
+PIPELINE_MAX_NEW_PER_DAY = "1"  # 验证期：每天最多开一条新的
+TTS_DAILY_CAP = "40"

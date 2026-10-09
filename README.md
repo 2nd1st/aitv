@@ -66,6 +66,15 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 - `/api/schedule` 顶层的 `anchor / total / items` = current，兼容没刷新的旧页面。`release.mjs timeline` 查看，`timeline-init` 按此刻实际在播的初始化（播放位置不变）。
 - 注意：KV 写入全球可见最长约 60 秒 + 客户端 60 秒轮询，极端情况下个别设备会晚于 switchAt 才拿到 next，此时它会立刻跳到新时间线的正确位置（与大家对齐，但那一条会从中间开始）。
 
+### 定时流水线（Worker cron，`src/pipeline.js`）
+
+- 每 15 分钟一轮（`wrangler.toml` 的 `[triggers]`）。每条一个状态机：抓榜去重 → 读原文 → brief（deepseek-chat）→ 稿子（deepseek-v4-pro）→ 校验（数字 / 语气 / kind 规则、内容安全、下架名单按稿子 hash）→ 豆包合成 → R2（`<hash>.mp3` + `<hash>.json`）→ 单条 `checkSeed`。
+- 每一步结果存 KV `pipe:item:<id>`，挂了下一轮从断点接着跑；临时错误同一步最多 3 次，内容不合格直接丢。
+- 合成额度：`ttscap:<东八区日期>`，一天 40 次（`TTS_DAILY_CAP`），同一条一天最多 2 次（一次重试），R2 里已有同 hash 音频不调豆包、不占额度；累计合成失败 4 次丢掉。
+- 验证期：`PIPELINE_MAX_NEW_PER_DAY = 1`（每天最多开一条新的），`AUTO_PUBLISH = "0"`（做好的条目不上线，只在 `pipe:index.last.plan` 记「如果上线会在哪个 switchAt 插入」）。
+- 打开自动上线后：最多插一条，插在当前在播那条后面（时间线 switchAt），超过 6 小时的条目下线但不让节目单少于 15 条；点评开头跟前后两条撞了不插。
+- 看状态：`node scripts/release.mjs pipeline [id]`。密钥用 `wrangler secret`：`DEEPSEEK_API_KEY`、`DOUBAO_TTS_ACCESS_TOKEN`。
+
 ## item 契约（screen 只认这些）
 ```json
 {

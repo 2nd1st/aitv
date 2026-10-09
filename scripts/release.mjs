@@ -135,6 +135,15 @@ if (cmd === "list") {
   console.log(`current：${e.current.version} ${e.current.items.length} 条，anchor ${fmt(e.current.anchor)}`);
   if (e.next) console.log(`next：${e.next.version} ${e.next.items.length} 条，${fmt(e.switchAt)} 切换`);
   console.log(`更新于 ${tl.updatedAt || "?"}（${tl.why || ""}）`);
+} else if (cmd === "pipeline") {
+  // 定时流水线的状态（src/pipeline.js）：上一轮做了什么、在途 / 待上线 / 丢弃的条目、今天的合成额度
+  const idx = kvGet("pipe:index") || {};
+  const d = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10).replace(/-/g, "");
+  console.log(JSON.stringify({ last: idx.last, pending: idx.pending, ready: idx.ready, dropped: (idx.dropped || []).slice(-5), daily: idx.daily, ttscap: kvGet(`ttscap:${d}`), error: kvGet("pipe:error") }, null, 1));
+  for (const id of [...(idx.pending || []), ...(idx.ready || [])].concat(v ? [v] : [])) {
+    const st = kvGet(`pipe:item:${id}`);
+    if (st) console.log(`\n${id}：${st.status} @${st.step} ${st.why || ""}\n  ${JSON.stringify({ kind: st.results?.brief?.kind, lines: st.results?.script?.lines, audio: st.results?.tts?.audio, duration: st.results?.tts?.duration, image: st.results?.tts?.image, errors: st.errors })}`);
+  }
 } else if (cmd === "timeline-init") {
   const ptr = kvGet("pointer") || {};
   if (kvGet("timeline") && !process.argv.includes("--force")) { console.log("已经有时间线了（--force 覆盖）"); process.exit(1); }
@@ -199,5 +208,5 @@ if (cmd === "list") {
   if (affected.size) kvPutJson("pointer", markVoid(kvGet("pointer") || ptr, [...affected], `含已下架稿子 ${entry.hash || entry.audio}${entry.id ? `（${entry.id}）` : ""}`));
   console.log(`已下架稿子 ${entry.hash || entry.audio}${entry.id ? `（${entry.id}）` : ""}；作废版本：${[...affected].join(", ") || "无"}。${now ? "紧急：立刻生效" : `${fmt(effAt)} 在条目边界生效`}。`);
 } else {
-  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id|hash> [--now] | timeline | timeline-init | untakedown <id|hash> | takedown-migrate"); process.exit(2);
+  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id|hash> [--now] | timeline | timeline-init | pipeline [id] | untakedown <id|hash> | takedown-migrate"); process.exit(2);
 }

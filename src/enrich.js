@@ -200,11 +200,12 @@ export function parseBrief(text) {
   try { return JSON.parse(m[0]); } catch { return null; }
 }
 
-export async function enrich(item, { llm, fetchImpl = fetch, retries = 0 } = {}) {
+// material：已经读好的原文（定时流水线按步骤存了「读原文」的结果，续跑时直接传进来，不再抓一遍）
+export async function enrich(item, { llm, fetchImpl = fetch, retries = 0, material: given } = {}) {
   // 内容安全先用标题和源站简介过一遍关键词：命中就不读原文、不调模型
   const pre = checkSafety(item);
   if (!pre.ok) return { ...item, image: null, brief: null, briefError: `内容安全：${pre.reasons.join("；")}`, unsafe: true };
-  const material = await fetchMaterial(item, { fetchImpl });
+  const material = given !== undefined ? given : await fetchMaterial(item, { fetchImpl });
   if (!material) return { ...item, image: null, brief: null, briefError: "原文读不到" };
   // 原文只在这个函数里用来提炼，不挂到 item 上，不进 seed / 节目单
   if (!llm) return { ...item, image: material.image ?? null, material: { url: material.url, chars: material.text.length }, brief: null, briefError: "没有配模型" };
