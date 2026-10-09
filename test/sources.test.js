@@ -43,12 +43,13 @@ test("Product Hunt：标题、标语、链接", () => {
   assert.ok(items.every((x) => !("rank" in x.fields)), "feed 顺序不是排名，不能给 rank");
 });
 
-test("AIHOT：中文标题和信源数", () => {
+test("AIHOT：中文标题，只留有文档的 rank", () => {
   const raw = JSON.parse(fx("aihot.json"));
   const items = parseAIHOT(raw, T);
   assert.equal(items.length, raw.items.length);
   items.forEach(shape);
-  assert.equal(items[0].fields.sourceCount, raw.items[0].sourceCount);
+  assert.equal(items[0].fields.rank, raw.items[0].rank);
+  for (const it of items) assert.ok(!("sourceCount" in it.fields) && !("discussions" in it.fields), "含义没核实的数字不进 item");
 });
 
 test("抓到的数字能过硬校验，编出来的数字被拦", () => {
@@ -87,4 +88,9 @@ test("去重和轮流排", () => {
   assert.equal(fresh.length, a.length - 1 + b.length);
   const mixed = interleave(fresh);
   assert.notEqual(mixed[0].source, mixed[1].source);
+});
+
+test("HN 不给 rank：Algolia 的返回顺序不是首页名次", () => {
+  const items = parseHN(JSON.parse(fx("hn.json")), T);
+  assert.ok(items.every((x) => !("rank" in x.fields)));
 });

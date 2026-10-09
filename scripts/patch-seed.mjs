@@ -1,11 +1,11 @@
 // 给已有 seed.json 补画面要的字段，不重新合成语音（幂等）：
 //   item.take（第三段，AI 点评）、rounds[i].part（what / who / take）、HN 英文标题的 fields.title_zh。
-// 用法：DEEPSEEK_API_KEY=… node scripts/patch-seed.mjs   （没有 key 就跳过翻译）
+// 用法：DEEPSEEK_API_KEY=… node scripts/patch-seed.mjs public/seeds/<version>/seed.json   （没有 key 就跳过翻译）
 import { readFileSync, writeFileSync } from "node:fs";
 import { needsTitleZh, translateTitle, PART_KEYS } from "../src/writer.js";
 import { makeDeepSeek } from "../src/llm.js";
 
-const path = new URL("../public/seed.json", import.meta.url);
+const path = process.argv[2] || new URL("../public/seed.json", import.meta.url);
 const seed = JSON.parse(readFileSync(path, "utf8"));
 const llm = process.env.DEEPSEEK_API_KEY ? makeDeepSeek({ apiKey: process.env.DEEPSEEK_API_KEY, model: process.env.AITV_BRIEF_MODEL || "deepseek-chat" }) : null;
 

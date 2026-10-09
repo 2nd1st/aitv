@@ -5,18 +5,26 @@ import { numberViolations } from "./digits.js";
 // 3. 文本字段（标题等）原样插入，里面带的数字来自源数据本身。
 // 常用词白名单（一个、一句话、唯一、十分……）和数字规则在 digits.js，与 enrich.js 共用。
 
+// 规则 A：每个字段写明它在源接口里到底是什么数；含义没核实的字段不许进稿（已删 votes / sourceCount / discussions，
+// HN 和 Product Hunt 的 rank 也已在 sources.js 去掉）。
 export const UNITS = {
+  // Hacker News（hn.algolia.com/api/v1 的 hit.points）：这条帖子在 HN 上的得分，即投票分（upvote score）。
   points: { after: " 分" },
+  // Hacker News（hit.num_comments）：这条帖子下的评论总数。
   comments: { after: " 条评论" },
+  // GitHub Trending（github.com/trending?since=daily 每行指向 /stargazers 的数字）：仓库累计 star 总数（抓取时）。
   stars: { after: " 颗星" },
+  // GitHub Trending（每行「N stars today」）：按 Trending 页面，该仓库今天新增的 star 数。
   starsToday: { after: " 颗星" },
+  // GitHub Trending（每行指向 /forks 的数字）：仓库累计 fork 总数（抓取时）。
   forks: { after: " 次" },
-  votes: { after: " 票" },
+  // 名次，只有两处来源：
+  //   GitHub Trending：在 github.com/trending?since=daily 当日列表里的位置（从 1 开始，按 GitHub 页面显示顺序）。
+  //   AIHOT：openapi-v1.json 定义为「One-based position in the current AIHOT Top 10 response」。
+  //   Hacker News、Product Hunt 不给 rank（返回顺序不是名次）。
   rank: { before: "第 ", after: " 名" },
-  sourceCount: { after: " 个来源" },
-  discussions: { after: " 条讨论" },
 };
-export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh"]);
+export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name"]);
 
 const SLOT = /\{\{(\w+)\}\}/g;
 

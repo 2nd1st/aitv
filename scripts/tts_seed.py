@@ -1,6 +1,8 @@
-"""本地最小版：把 build-items 的输出逐条合成豆包语音，写 public/audio 和 public/seed.json。
-用法：node scripts/build-items.mjs 20 > /tmp/items.json && /workspace/podcast/.venv/bin/python scripts/tts_seed.py /tmp/items.json
-写完 seed.json 后，public/audio 里不再被引用的旧 mp3 会删掉。
+"""把 build-items 的输出逐条合成豆包语音，写成一个独立版本：
+  public/seeds/<version>/audio/*.mp3 + public/seeds/<version>/seed.json（带 version）。
+不碰线上版本；切换用 scripts/release.mjs use <version>（校验通过、可播 >= 15 条才切）。
+用法：node scripts/build-items.mjs 20 > /tmp/items.json && /workspace/podcast/.venv/bin/python scripts/tts_seed.py /tmp/items.json [version]
+version 不给就用东八区当前时间，如 20261009-1130。
 进 seed 的字段走白名单（SEED_KEYS），原文（materialText 等）一律不写进去。
 需要环境变量 DOUBAO_TTS_ACCESS_TOKEN（豆包语音 API Key）。"""
 import asyncio, json, os, re, subprocess, sys, tempfile
@@ -9,10 +11,14 @@ from doubao_podcast import run
 
 SPEAKERS = ["zh_male_dayixiansheng_v2_saturn_bigtts", "zh_female_mizaitongxue_v2_saturn_bigtts"]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AUDIO = os.path.join(ROOT, "public", "audio")
+import datetime
+VERSION = sys.argv[2] if len(sys.argv) > 2 else datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y%m%d-%H%M")
+assert re.fullmatch(r"\d{8}-\d{4,6}", VERSION), VERSION
+OUT = os.path.join(ROOT, "public", "seeds", VERSION)
+AUDIO = os.path.join(OUT, "audio")
 ANCHOR_MS = 1760000000000  # 固定锚点：所有设备按同一个时钟算位置
 
-SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "template", "focus", "fields", "brief", "script", "take"]
+SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "template", "focus", "kind", "fields", "brief", "script", "take"]
 PART_KEYS = ["what", "who", "take"]
 
 def tag_parts(rounds, lines):
@@ -58,16 +64,16 @@ async def main(src):
         d = duration(path)
         if d <= 0: print("跳过（无音频）", it["id"]); continue
         it2 = {k: it[k] for k in SEED_KEYS if k in it}
-        it2.update(audio=f"/audio/{name}", duration=round(d + 0.6, 3), spoken="".join(it["lines"]),
+        it2.update(audio=f"/seeds/{VERSION}/audio/{name}", duration=round(d + 0.6, 3), spoken="".join(it["lines"]),
                    rounds=tag_parts([{"text": r["text"], "start_time": r["start_time"], "end_time": r["end_time"]} for r in rounds], it["lines"]))
         out.append(it2)
         print(f"{i+1}/{len(items)}", it["id"], round(d, 1), "秒")
-    json.dump({"anchorMs": ANCHOR_MS, "items": out}, open(os.path.join(ROOT, "public", "seed.json"), "w"),
+    json.dump({"version": VERSION, "anchorMs": ANCHOR_MS, "items": out}, open(os.path.join(OUT, "seed.json"), "w"),
               ensure_ascii=False, indent=1)
-    print("seed.json 写好，", len(out), "条")
+    print("版本", VERSION, "seed.json 写好，", len(out), "条 →", OUT)
     keep = {os.path.basename(x["audio"]) for x in out}
-    for f in os.listdir(AUDIO):
+    for f in os.listdir(AUDIO):  # 只清本版本目录里没用上的（比如合成失败的半成品）
         if f.endswith(".mp3") and f not in keep:
-            os.remove(os.path.join(AUDIO, f)); print("删掉旧音频", f)
+            os.remove(os.path.join(AUDIO, f)); print("删掉没用上的音频", f)
 
 asyncio.run(main(sys.argv[1]))

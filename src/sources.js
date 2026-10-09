@@ -40,7 +40,7 @@ function item({ id, source, url, fetchedAt, publishedAt = null, focus = null, fi
 // ---------- 解析：纯函数，测试用 fixtures 跑 ----------
 
 export function parseHN(json, fetchedAt) {
-  return (json.hits || []).map((h, i) =>
+  return (json.hits || []).map((h) =>
     item({
       id: `hn-${h.objectID}`,
       source: "Hacker News",
@@ -48,7 +48,8 @@ export function parseHN(json, fetchedAt) {
       fetchedAt,
       publishedAt: h.created_at_i ? h.created_at_i * 1000 : null,
       focus: "points",
-      fields: { title: h.title, rank: i + 1, points: h.points, comments: h.num_comments },
+      // 不给 rank：Algolia search 的返回顺序是相关度排序，不是 HN 首页上的名次（未核实的数字不进稿）
+      fields: { title: h.title, points: h.points, comments: h.num_comments },
     })
   );
 }
@@ -114,13 +115,12 @@ export function parseAIHOT(json, fetchedAt) {
       url: links.original || x.url || permalink,
       fetchedAt,
       publishedAt: x.latestAt ? Date.parse(x.latestAt) : null,
-      focus: "sourceCount",
+      // sourceCount / signalCount 在 openapi-v1.json 里没有字段说明，含义没法核实，不进 item。
+      // rank 有说明：「One-based position in the current AIHOT Top 10 response.」
       fields: {
         title: x.title,
         origin: typeof x.source === "object" && x.source ? x.source.name : x.source,
         rank: x.rank,
-        sourceCount: x.sourceCount,
-        discussions: x.signalCount,
         permalink,
       },
     });

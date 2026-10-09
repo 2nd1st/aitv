@@ -9,7 +9,7 @@ const T = 1760000000000;
 const [gh] = parseGitHubTrending(fx("gh-trending.html"), T);
 const fakeFetch = async (url) => (url.includes("raw.githubusercontent") ? new Response(fx("readme.md")) : new Response("", { status: 404 }));
 const llmSays = (obj) => async () => JSON.stringify(obj);
-const good = { what: "一个把游戏主机程序移植到电脑上的工具", who: "想在电脑上跑主机游戏的开发者", highlight: "不靠模拟器，直接转成本机格式" };
+const good = { kind: "project", what: "一个把游戏主机程序移植到电脑上的工具", who: "想在电脑上跑主机游戏的开发者", highlight: "不靠模拟器，直接转成本机格式" };
 
 test("正常的一句话点评能通过：白名单词不算数字", () => {
   assert.equal(hasNumber("一句话点评：这是一个十分好用的工具，唯一缺点是文档少"), false);
@@ -29,7 +29,9 @@ test("补出来的三个字段带数字，整条不给 brief", async () => {
 test("干净的三个字段进 fields，原有数字字段不动", async () => {
   const r = await enrich(gh, { fetchImpl: fakeFetch, llm: llmSays(good) });
   assert.deepEqual(r.brief, good);
+  assert.equal(r.kind, "project");
   assert.equal(r.fields.what, good.what);
+  assert.ok(!("kind" in r.fields));
   assert.equal(r.fields.starsToday, gh.fields.starsToday);
   assert.match(r.material.url, /raw\.githubusercontent/);
 });
@@ -66,4 +68,33 @@ test("没配模型时也不把原文挂到 item 上", async () => {
   assert.equal(r.brief, null);
   assert.ok(!("materialText" in r));
   assert.ok(!JSON.stringify(r).includes(markdownToText(fx("readme.md")).slice(0, 80)));
+});
+
+test("brief 必须带合法 kind；name 必须是标题里原样的一段", async () => {
+  const noKind = await enrich(gh, { fetchImpl: fakeFetch, llm: llmSays({ ...good, kind: "review" }) });
+  assert.equal(noKind.brief, null);
+  assert.match(noKind.briefError, /kind/);
+  const name = gh.fields.title.split(" / ")[1];
+  const ok = await enrich(gh, { fetchImpl: fakeFetch, llm: llmSays({ ...good, name }) });
+  assert.equal(ok.brief.name, name);
+  assert.equal(ok.fields.name, name);
+  // 编出来的名字（标题里没有）去掉，不进稿
+  const made = await enrich(gh, { fetchImpl: fakeFetch, llm: llmSays({ ...good, name: "SuperTool 9000" }) });
+  assert.ok(made.brief && !("name" in made.brief) && !("name" in made.fields));
+});
+
+test("brief 里不许有鼓励抄袭的说法", async () => {
+  const r = await enrich(gh, { fetchImpl: fakeFetch, llm: llmSays({ ...good, who: "想抄别人功能又没源码的开发者" }) });
+  assert.equal(r.brief, null);
+  assert.match(r.briefError, /语气/);
+});
+
+test("name：原样子串、不能是整句中文标题", async () => {
+  const { nameOk } = await import("../src/enrich.js");
+  const t = "Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价";
+  assert.equal(nameOk("Sonnet 5.5 与 Haiku 5.5", t), true);
+  assert.equal(nameOk("Sonnet 5.5", t), true);
+  assert.equal(nameOk("Sonnet 6", t), false);
+  assert.equal(nameOk(t, t), false);
+  assert.equal(nameOk("Theranos.world", "Theranos.world"), true);
 });
