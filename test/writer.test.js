@@ -17,7 +17,7 @@ const item = {
 const good = {
   part1: "{{title}} 是一个给编程助手用的画图技能，能直接生成排版干净的架构图和流程图。它会读你网站的配色，让图表风格跟品牌保持统一。",
   part2: "天天要画架构图、写技术文档的开发者用得上，不用再在绘图软件里反复调样式。今天新增 {{starsToday}} 颗星，说明不少人在找这类工具。",
-  part3: "手头正好有文档要配图的话，今天就挑张旧图让它重画，对比一下效果。",
+  part3: "手头正好有文档要配图的话，挑张旧图让它重画，对比一下效果。",
 };
 const says = (...outs) => { let i = 0; const seen = []; const f = async (p) => { seen.push(p); return JSON.stringify(outs[Math.min(i++, outs.length - 1)]); }; f.seen = seen; return f; };
 
@@ -174,4 +174,19 @@ test("UNITS 里每个字段上方都有说明它在源接口里是什么数的�
     assert.match(src[i - 1], /^\s*\/\//, `${k} 上方要有注释`);
   }
   for (const gone of ["votes", "sourceCount", "discussions"]) assert.ok(!(gone in UNITS), `${gone} 含义没核实，不许留`);
+});
+
+test("验收第三版：不夸大、点评不套「今天 / 如果你」、HN 只说首页热帖、限制要交代", () => {
+  const f = scriptFields(item);
+  assert.equal(checkScript([good.part1.replace("能直接", "能完美"), good.part2, good.part3], f).ok, false);
+  assert.equal(checkScript([good.part1, good.part2.replace("用得上", "会被它偷偷改掉习惯"), good.part3], f).ok, false);
+  assert.equal(checkScript([good.part1, good.part2, "今天就挑张旧图让它重画，对比一下效果，看看差别在哪儿。"], f).ok, false);
+  assert.equal(checkScript([good.part1, good.part2, "如果你手头有文档要配图，挑张旧图让它重画，对比一下效果。"], f).ok, false);
+  assert.equal(checkScript([good.part1, good.part2, good.part3], f).ok, true);
+  const hn = { id: "hn-1", source: "Hacker News", fields: { title: "SynthID Detector", name: "SynthID Detector", what: "检测图片是否带水印", who: "做内容审核的人", highlight: "能读出隐形水印", limit: "没检出不代表不是生成的", points: 300 }, brief: { kind: "product" } };
+  const p = scriptPrompt(hn);
+  assert.match(p, /Hacker News 首页热帖（不要说第几名）/);
+  assert.match(p, /限制 \{\{limit\}\}：没检出不代表不是生成的（part2 或 part3 必须交代这条限制/);
+  assert.match(p, /不夸大/);
+  assert.ok(scriptFields(hn).limit);
 });

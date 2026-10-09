@@ -88,3 +88,11 @@ test("refineAIHOTUrls：换链接、去掉 storyId；接口失败保留原链接
   assert.ok(!("storyId" in out[0]) && !("storyId" in out[1]));
   assert.equal(out[1].url, "https://a.test/"); assert.equal(out[2].url, "https://h.test/");
 });
+
+test("audio: 内容寻址 key（/audio/<16 位 hash>.mp3）也能读；json 时间轴和别的扩展名不对外", async () => {
+  const hashEnv = { AUDIO: { ...bucket, async get(key, o) { return bucket.get(key === "0123456789abcdef.mp3" ? "20261009-1133/a.mp3" : key, o); } } };
+  const res = await serveAudio(req("/audio/0123456789abcdef.mp3", { range: "bytes=1000-1999" }), hashEnv);
+  assert.equal(res.status, 206); assert.equal(res.headers.get("content-length"), "1000");
+  assert.equal((await serveAudio(req("/audio/0123456789abcdef.json"), hashEnv)).status, 404);
+  assert.equal((await serveAudio(req("/audio/0123456789ABCDEF.mp3"), hashEnv)).status, 404);
+});

@@ -1,7 +1,7 @@
 // 发布 / 回滚节目单版本（详见 README「发布与回滚」）。需要 CLOUDFLARE_API_TOKEN（source /home/box/.cf_aitv.env）。
 //   node scripts/release.mjs list               本地版本 + 线上指针
 //   node scripts/release.mjs check <version>    只校验本地 releases/<version>
-//   node scripts/release.mjs publish <version>  校验 → 音频传 R2（<version>/<file>.mp3）→ seed 写 KV（seed:<version>）。不切换。
+//   node scripts/release.mjs publish <version>  校验 → R2 里还没有的音频才上传（<hash>.mp3 + <hash>.json 时间轴）→ seed 写 KV（seed:<version>）。不切换。
 //   node scripts/release.mjs use <version>      校验 + 逐条 HEAD 线上 /audio/<version>/… 确认能播，可播 >= 15 条才把 KV 指针切过去
 //   node scripts/release.mjs rollback           KV 指针切回 previous（不用重新部署）
 import { readFileSync, existsSync, statSync, readdirSync, writeFileSync } from "node:fs";
@@ -18,7 +18,10 @@ const kvGet = (key) => { try { return JSON.parse(wr("kv", "key", "get", "--bindi
 const kvPutFile = (key, path) => wr("kv", "key", "put", "--binding", "SCHEDULE", key, "--path", path, "--remote");
 const kvPutJson = (key, obj) => { const f = join(tmpdir(), `aitv-kv-${Date.now()}.json`); writeFileSync(f, JSON.stringify(obj)); kvPutFile(key, f); };
 const seedPath = (v) => new URL(`${v}/seed.json`, ROOT);
-const localFile = (v, audio) => new URL(`${v}/audio/${audio.split("/").pop()}`, ROOT);
+const CACHE = new URL("../audio-cache/", import.meta.url);
+const isHash = (audio) => /^\/audio\/[0-9a-f]{16}\.mp3$/.test(audio);
+// 内容寻址的音频在 audio-cache/；早期按版本放的在 releases/<v>/audio/
+const localFile = (v, audio) => isHash(audio) ? new URL(audio.split("/").pop(), CACHE) : new URL(`${v}/audio/${audio.split("/").pop()}`, ROOT);
 const readSeed = (v) => JSON.parse(readFileSync(seedPath(v), "utf8"));
 
 function check(v) {
@@ -41,13 +44,20 @@ if (cmd === "list") {
   const r = check(v); report(v, r);
   if (!r.ok && process.argv[4] !== "--legacy") { console.log("不上传"); process.exit(1); }
   const seed = readSeed(v);
+  let put = 0, skip = 0;
   for (const it of seed.items) {
     const key = it.audio.replace(/^\/audio\//, "");
-    wr("r2", "object", "put", `${BUCKET}/${key}`, "--file", localFile(v, it.audio).pathname, "--content-type", "audio/mpeg", "--remote");
-    process.stdout.write(".");
+    const file = localFile(v, it.audio);
+    // 已经在线上（内容寻址，同 key 必同内容）就不再传
+    const head = await fetch(BASE + it.audio, { method: "HEAD" }).catch(() => null);
+    if (head?.status === 200 && Number(head.headers.get("content-length")) === statSync(file).size) { skip++; process.stdout.write("="); continue; }
+    wr("r2", "object", "put", `${BUCKET}/${key}`, "--file", file.pathname, "--content-type", "audio/mpeg", "--cache-control", "public, max-age=31536000, immutable", "--remote");
+    const meta = file.pathname.replace(/\.mp3$/, ".json");
+    if (isHash(it.audio) && existsSync(meta)) wr("r2", "object", "put", `${BUCKET}/${key.replace(/\.mp3$/, ".json")}`, "--file", meta, "--content-type", "application/json", "--remote");
+    put++; process.stdout.write(".");
   }
   kvPutFile(`seed:${v}`, seedPath(v).pathname);
-  console.log(`\n已上传 ${seed.items.length} 个音频到 R2 ${BUCKET}/${v}/，seed 写入 KV seed:${v}`);
+  console.log(`\nR2 ${BUCKET}：新传 ${put} 个音频，${skip} 个已存在跳过；seed 写入 KV seed:${v}`);
 } else if (cmd === "use") {
   const r = check(v); report(v, r);
   if (!r.ok) { console.log("不切换，线上保持原版本"); process.exit(1); }

@@ -8,7 +8,7 @@
 // 不合格带着错误重写一次，还不合格整条丢掉。
 import { checkTemplate, renderScript, UNITS } from "./validate.js";
 import { parseBrief, KINDS } from "./enrich.js";
-import { toneViolations } from "./tone.js";
+import { toneViolations, overclaimViolations } from "./tone.js";
 
 export const PARTS = ["这是什么", "跟你有什么关系", "AI 点评"];
 export const BANNED = ["值得关注", "值得一看", "值得期待", "值得一试", "拭目以待", "不容小觑", "令人期待", "引发热议", "备受关注"];
@@ -26,7 +26,7 @@ export const TITLE_SLOT_SOURCES = new Set(["GitHub Trending", "Product Hunt"]);
 export function scriptFields(item) {
   const f = item.fields || {};
   const out = {};
-  for (const k of ["title", "name", "what", "who", "highlight"]) if (has(f[k])) out[k] = f[k];
+  for (const k of ["title", "name", "what", "who", "highlight", "limit"]) if (has(f[k])) out[k] = f[k];
   if (!TITLE_SLOT_SOURCES.has(item.source)) delete out.title;
   for (const k of Object.keys(UNITS)) if (typeof f[k] === "number" && Number.isFinite(f[k])) out[k] = f[k];
   return out;
@@ -37,6 +37,8 @@ function unitHint(k) {
   return `${u.before || ""}{{${k}}}${u.after || ""}`;
 }
 
+// HN 拉的是 Algolia front_page 标签：确实在首页上，但返回顺序不是名次，所以只说「首页热帖」，不说第几名
+const SOURCE_LABEL = { "Hacker News": "Hacker News 首页热帖（不要说第几名）", "Product Hunt": "Product Hunt（不要说第几名）" };
 const KIND_LABEL = { product: "产品", project: "开源项目", commentary: "评论 / 观点文章", news: "新闻报道" };
 export const opening = (s) => String(s || "").replace(/^[\s，。、“”「」]+/, "").slice(0, OPENING_CHARS);
 
@@ -52,7 +54,7 @@ part3「AI 点评」：一句判断，或者接下来该看什么（比如「接
   不要写「今天就去试」「去下载」这类推荐。`;
   return `part1「这是什么」：两句。第一句必须明确说出${kind === "project" ? "项目" : "产品"}名字（用 ${nameHint}），讲清它做了什么；第二句补一个具体的做法或特点。
 part2「跟你有什么关系」：两句。谁会用得上、在什么场景下省事或解决什么问题。
-part3「AI 点评」：可执行的建议，告诉听众今天具体可以做什么（试一下、拿它对比、先看某个功能），但要具体到场景。`;
+part3「AI 点评」：可执行的建议，告诉听众具体可以做什么（试一下、拿它对比、先看某个功能、先确认某个限制），但要具体到场景。`;
 }
 
 export function scriptPrompt(item, feedback = "", { prevTake = "" } = {}) {
@@ -63,12 +65,13 @@ export function scriptPrompt(item, feedback = "", { prevTake = "" } = {}) {
   return `你是中文 AI 资讯电视台「AI 今天」的主播，给一条热点写口播稿。听众边听边决定要不要去看原文。
 
 这条的类型（补料时已定，不能改）：${kind}（${KIND_LABEL[kind] || kind}）
-来源：${item.source}
+来源：${SOURCE_LABEL[item.source] || item.source}
 ${f.title ? `标题 {{title}}：${f.title}` : `原标题（只供你理解，不能用 {{title}} 插入）：${item.fields?.title ?? ""}`}
 ${f.name ? `名字 {{name}}：${f.name}（从标题里原样摘出，已核实）` : "这条没有单独的名字字段。"}
 它是什么 {{what}}：${f.what}
 跟谁有关 {{who}}：${f.who}
 亮点 {{highlight}}：${f.highlight}
+${f.limit ? `限制 {{limit}}：${f.limit}（part2 或 part3 必须交代这条限制，可以换说法）` : "素材里没写明限制：不要替它下「没有限制」「都能用」这类结论。"}
 ${nums.length ? `可用的数字字段（只能原样照抄这个写法，包括空格和单位）：${nums.map(unitHint).join("、")}` : "这条没有可用的数字字段。"}
 
 写三段，口语化，像在跟懂行的朋友说话，三段合起来一百五十到二百一十个字（念出来二十到三十五秒；算上插入的名字，超过二百五十字会被退回）。part1、part2 要写得充实具体，但不要注水、不要重复：
@@ -77,6 +80,8 @@ ${kindRules(kind, f)}
 硬性规定：
 - 具体：part1 必须明确说出产品 / 模型 / 项目 / 主角的名字，不许只说「一款新模型」「一个工具」。${f.name ? "名字用 {{name}} 插入（带数字的名字只能这样写）。" : ""}
 - 语气：中性、专业。不许鼓励或美化抄袭、照搬别人的功能、盗版、破解、绕过限制，不用「抄」「没源码」「白嫖」「绕过」这类说法。
+- 不夸大：只说上面给的信息里有依据的事，程度、范围、确定性都不能往上加。实验性 / 早期项目别说成能替代成熟产品；作者或公司的说法要说成「据作者说」「官方称」；检测 / 识别类工具要说明没检出不代表没有。不用「偷偷」「悄悄」「颠覆」「碾压」「完美」「最强」「史上」「神器」「天花板」这类词。
+- 别套句式：点评里不要用「今天」；点评不要以「如果你」开头。
 - 严禁空洞夸奖：不许出现「值得关注」「值得一看」「值得期待」「拭目以待」「不容小觑」「引发热议」这类话。
 - 稿子正文里一律不许出现数字：阿拉伯数字、中文数字（一二三……十百千万两半倍）、版本号都不行；带数字的名字只能用 {{name}}${f.title ? " 或 {{title}}" : ""} 插入。
   例外：「一个、一款、一种、一句话、一下、一起、一些、一直、一样、唯一、统一、万一、十分」这些常用词可以用；其他像「第一」「一键」「一天」「一篇」「一张」「一条」「一套」「一位」「一眼」「一次」「一点」「一堆」「三维」「两者」「百度」「千万」「半导体」都不行，换个说法（「整套」「有位」「马上」「立体」「不少」）。
@@ -100,7 +105,12 @@ export function checkScript(parts, fields, { kind = "product", prevTake = "" } =
     const tone = toneViolations(p);
     if (tone.length) errors.push(`part${i + 1} 语气不合适（${tone.join("、")}），要中性专业`);
     if (/这是什么|跟你有什么关系|AI 点评|一句点评/.test(p)) errors.push(`part${i + 1} 念了小标题`);
+    const over = overclaimViolations(p);
+    if (over.length) errors.push(`part${i + 1} 说过头了（${over.join("、")}），照给的信息的程度说`);
   });
+  // 句式别套（验收：二十条点评十九条带「今天」、十六条以「如果你」开头）
+  if (parts[2].includes("今天")) errors.push("点评里不要用「今天」，换个说法");
+  if (/^[\s，。「“]*如果你/.test(parts[2])) errors.push("点评不要以「如果你」开头，换个句式");
   // 具体：part1 必须点名
   if (fields.name) {
     const named = parts[0].includes("{{name}}") || parts[0].includes(fields.name) || (fields.title && parts[0].includes("{{title}}"));
@@ -141,7 +151,7 @@ export async function writeScript(item, { llm, retries = 1, prevTake = "" } = {}
 }
 
 // 进 seed / 节目单的字段白名单：原文（materialText 等）一律不带。
-export const SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "template", "focus", "kind", "fields", "brief", "script", "take", "lines"];
+export const SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "template", "focus", "kind", "image", "fields", "brief", "script", "take", "lines"];
 export function toSeedItem(item) {
   const out = {};
   for (const k of SEED_KEYS) if (k in item) out[k] = item[k];

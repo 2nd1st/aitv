@@ -15,10 +15,10 @@
 
 ### 发布与回滚
 
-- **音频在 R2**（桶 `aitv-audio`，Worker 绑定 `env.AUDIO`），key 是 `<版本号>/<文件>.mp3`，Worker 在 `/audio/<版本号>/<文件>.mp3` 上直接读 R2：带 `Range` 回 206（`Content-Range`、`Content-Length` 准确），不带回 200；都带 `Accept-Ranges: bytes`、`ETag`、长缓存（`If-None-Match` 命中回 304）。`public/` 里不再放 mp3。
+- **音频在 R2**（桶 `aitv-audio`，Worker 绑定 `env.AUDIO`），**按内容寻址**：key 是 `<hash>.mp3`，hash = sha256(两个音色 + 合成参数 + 三段口播稿) 的前 16 位，旁边 `<hash>.json` 存分句时间轴（不对外）。同一份稿子不重复合成（`tts_seed.py` 先看本地 `audio-cache/`，再看 R2，有就跳过 TTS），跨版本共用，定时任务重跑也不重复花钱。最早两个版本（20261009-1057 / 1133）用的是 `<版本号>/<文件>.mp3`，Worker 照样认。Worker 在 `/audio/<hash>.mp3` 上直接读 R2：带 `Range` 回 206（`Content-Range`、`Content-Length` 准确），不带回 200；都带 `Accept-Ranges: bytes`、`ETag`、长缓存（`If-None-Match` 命中回 304）。`public/` 里不再放 mp3。
 - **节目单在 KV**（命名空间绑定 `SCHEDULE`）：`seed:<版本号>` 是整份节目单，`pointer` 是 `{ "version": 线上版本, "previous": 上一版 }`。`/api/schedule` 读指针对应的 seed，返回里带 `version`。播放器每分钟查一次，版本变了自动接上，不用刷新。
-- 本地 `releases/<版本号>/seed.json` 进 git；`releases/<版本号>/audio/` 只在本机（.gitignore），线上以 R2 为准。
-- 新版本：`scripts/tts_seed.py items.json <版本号>` 生成到 `releases/<版本号>/` → `node scripts/release.mjs publish <版本号>`（校验后把音频传 R2、seed 写 KV，**不切换**）→ `node scripts/release.mjs use <版本号>`（再校验一遍，并逐条 HEAD 线上 `/audio/…` 确认 200 + audio/mpeg + 长度一致；**可播少于 15 条就不切**；通过后一步改 KV 指针）。不需要重新部署 Worker。
+- 本地 `releases/<版本号>/seed.json` 进 git；音频（`audio-cache/`、旧的 `releases/<版本号>/audio/`）只在本机（.gitignore），线上以 R2 为准。
+- 新版本：`scripts/tts_seed.py items.json <版本号>` 生成到 `releases/<版本号>/` → `node scripts/release.mjs publish <版本号>`（校验后把 R2 里还没有的音频传上去、seed 写 KV，**不切换**）→ `node scripts/release.mjs use <版本号>`（再校验一遍，并逐条 HEAD 线上 `/audio/…` 确认 200 + audio/mpeg + 长度一致；**可播少于 15 条就不切**；通过后一步改 KV 指针）。不需要重新部署 Worker。
 - **回滚**（KV 指针切回上一版，旧版本的 R2 音频和 KV seed 都还在；不用部署，KV 全球生效约 60 秒）：
   ```sh
   cd /workspace/aitv && source /home/box/.cf_aitv.env && node scripts/release.mjs rollback
@@ -36,7 +36,7 @@
   "template": "title | number | source",
   "start": 1760000000000,
   "duration": 38.2,
-  "audio": "/audio/20261009-1133/hn-41234567.mp3",
+  "audio": "/audio/3f9c0a1b2d4e5f60.mp3",
   "url": "https://原文链接",
   "source": "Hacker News",
   "fields": { "title": "...", "points": 812, "comments": 233 },

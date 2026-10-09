@@ -24,7 +24,7 @@ export const UNITS = {
   //   Hacker News、Product Hunt 不给 rank（返回顺序不是名次）。
   rank: { before: "第 ", after: " 名" },
 };
-export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name"]);
+export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name", "limit"]);
 
 const SLOT = /\{\{(\w+)\}\}/g;
 

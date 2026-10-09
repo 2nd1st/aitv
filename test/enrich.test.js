@@ -98,3 +98,45 @@ test("name：原样子串、不能是整句中文标题", async () => {
   assert.equal(nameOk(t, t), false);
   assert.equal(nameOk("Theranos.world", "Theranos.world"), true);
 });
+
+import { matchName } from "../src/enrich.js";
+test("验收第三版：name 容忍空格差异、取标题原样；brief 不许夸大；limit 可选但也过数字和语气规则", () => {
+  assert.equal(matchName("GPT-6 与 Intelligent UI", "OpenAI 发布 GPT-6与Intelligent UI"), "GPT-6与Intelligent UI");
+  assert.equal(matchName("Sonnet 5.5", "Claude Sonnet 5.5 降价"), "Sonnet 5.5");
+  assert.equal(matchName("Sonnet 6", "Claude Sonnet 5.5 降价"), null);
+  const item = { fields: { title: "OpenAI 发布 GPT-6与Intelligent UI" } };
+  const base = { kind: "news", name: "GPT-6 与 Intelligent UI", what: "发布了新模型和界面", who: "做应用的开发者", highlight: "界面能随任务变化" };
+  const r = checkBrief(base, item);
+  assert.equal(r.ok, true); assert.equal(r.name, "GPT-6与Intelligent UI");
+  assert.equal(checkBrief({ ...base, what: "咖啡机偷偷往外发数据" }, item).ok, false);
+  assert.equal(checkBrief({ ...base, highlight: "颠覆整个行业" }, item).ok, false);
+  assert.equal(checkBrief({ ...base, limit: "" }, item).ok, true);
+  assert.equal(checkBrief({ ...base, limit: "只支持三种语言" }, item).ok, false);
+  assert.match(briefPrompt({ fields: { title: "x" }, source: "AIHOT" }, { text: "y" }), /不是发布它的公司/);
+});
+
+test("limit 不合格只去掉 limit，不丢整条", async () => {
+  const item = { id: "x", source: "Hacker News", url: "https://x.test/", fields: { title: "Foo Bar" } };
+  const html = "<html><title>Foo</title><body>" + "素材正文".repeat(100) + "</body></html>";
+  const fetchImpl = async () => ({ ok: true, text: async () => html });
+  const llm = async () => JSON.stringify({ kind: "product", name: "Foo", what: "一个工具", who: "开发者", highlight: "更快", limit: "只支持三种语言" });
+  const r = await enrich(item, { llm, fetchImpl });
+  assert.ok(r.brief); assert.equal(r.brief.limit, undefined); assert.equal(r.brief.name, "Foo");
+});
+
+import { extractImage } from "../src/enrich.js";
+test("封面图：og:image / twitter:image，绝对地址，只要 https；enrich 写进 item.image", async () => {
+  assert.equal(extractImage('<meta property="og:image" content="/img/cover.png">', "https://a.test/post/1"), "https://a.test/img/cover.png");
+  assert.equal(extractImage('<meta content="https://cdn.test/x.jpg?a=1&amp;b=2" property="og:image" />', "https://a.test/"), "https://cdn.test/x.jpg?a=1&b=2");
+  assert.equal(extractImage('<meta name="twitter:image" content="https://t.test/y.png">', "https://a.test/"), "https://t.test/y.png");
+  assert.equal(extractImage('<meta property="og:image" content="http://insecure.test/z.png">', "https://a.test/"), null);
+  assert.equal(extractImage('<meta property="og:image" content="http://x.test/a.png"><meta name="twitter:image" content="https://x.test/b.png">', "https://a.test/"), "https://x.test/b.png");
+  assert.equal(extractImage("<html></html>", "https://a.test/"), null);
+  const item = { id: "x", source: "Hacker News", url: "https://x.test/", fields: { title: "Foo" } };
+  const html = '<html><head><meta property="og:image" content="/c.png"></head><body>' + "素材正文".repeat(100) + "</body></html>";
+  const llm = async () => JSON.stringify({ kind: "product", what: "一个工具", who: "开发者", highlight: "更快" });
+  const r = await enrich(item, { llm, fetchImpl: async () => ({ ok: true, url: "https://x.test/", text: async () => html }) });
+  assert.equal(r.image, "https://x.test/c.png");
+  const r2 = await enrich(item, { llm, fetchImpl: async () => ({ ok: true, text: async () => "<p>" + "素材".repeat(200) + "</p>" }) });
+  assert.equal(r2.image, null);
+});

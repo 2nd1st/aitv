@@ -1,6 +1,6 @@
-// /audio/<version>/<file>.mp3：从 R2（env.AUDIO）读，支持 Range（206 + Content-Range）和条件请求（ETag / 304）。
-// key 按节目单版本分目录，内容不变，可以长缓存；回滚只改指针，旧 key 还在。
-const KEY_RE = /^\d{8}-\d{4,6}\/[A-Za-z0-9_.-]+\.mp3$/;
+// /audio/<hash>.mp3（内容寻址，hash = sha256(音色 + 参数 + 口播稿) 前 16 位；早期版本是 /audio/<version>/<file>.mp3）：从 R2（env.AUDIO）读，支持 Range（206 + Content-Range）和条件请求（ETag / 304）。
+// key 一旦写入内容就不变，可以长缓存；回滚只改指针，旧 key 还在。
+const KEY_RE = /^(?:[0-9a-f]{16}|\d{8}-\d{4,6}\/[A-Za-z0-9_.-]+)\.mp3$/;
 
 export async function serveAudio(req, env) {
   if (req.method !== "GET" && req.method !== "HEAD") return new Response("Method Not Allowed", { status: 405, headers: { allow: "GET, HEAD" } });

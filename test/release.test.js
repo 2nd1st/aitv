@@ -50,3 +50,11 @@ test("/api/schedule 按 KV 指针读版本，并返回 version；没有指针返
   const none = await worker.fetch(new Request("https://aitv.test/api/schedule"), { SCHEDULE: { get: async () => null } });
   assert.equal(none.status, 503);
 });
+
+import { audioPathOk } from "../src/release.js";
+test("音频地址：内容寻址和旧的按版本目录都认，别的版本目录不认", () => {
+  assert.ok(audioPathOk("/audio/0123456789abcdef.mp3", "20261009-1200"));
+  assert.ok(audioPathOk("/audio/20261009-1200/hn-1.mp3", "20261009-1200"));
+  assert.ok(!audioPathOk("/audio/20261009-1133/hn-1.mp3", "20261009-1200"));
+  assert.ok(!audioPathOk("/seeds/20261009-1200/audio/hn-1.mp3", "20261009-1200"));
+});
