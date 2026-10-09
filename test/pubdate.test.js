@@ -70,7 +70,7 @@ test("AIHOT 补料：原文日期新 → publishedAt 用原文的，url 不动�
   const it = aihotItem(tc, "2026-10-08T18:55:17.000Z");
   const m = await fetchMaterial(it, { now: NOW, fetchImpl: net({ [tc]: fx("orig-techcrunch-gemini-agent.html") }) });
   assert.equal(m.url, tc);
-  assert.deepEqual(m.patch, { publishedAt: Date.parse("2026-10-08T18:18:00Z"), dateUnknown: false });
+  assert.deepEqual(m.patch, { publishedAt: Date.parse("2026-10-08T18:18:00Z"), dateUnknown: false, pubDateSource: "page" });
   assert.ok(m.image);
   const plain = "https://blog.example/post";
   const it2 = aihotItem(plain, "2026-10-08T18:55:17.000Z");

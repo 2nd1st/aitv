@@ -18,6 +18,7 @@ import { hasNumber, WORD_WHITELIST } from "./digits.js";
 import { toneViolations, overclaimViolations } from "./tone.js";
 import { checkSafety } from "./safety.js";
 import { screenImageUrl, storeScreenedImage } from "./imagepick.js";
+import { fallbackPubDate } from "./pubdate.js";
 export { storeScreenedImage };
 export { hasNumber, WORD_WHITELIST };
 
@@ -183,7 +184,7 @@ export async function fetchMaterial(item, { fetchImpl = fetch, timeoutMs = 12000
             stale = { url: item.url, publishedAt: date.publishedAt };
             continue; // 旧链接：正文不能用（讲的是另一件事），去读 AIHOT 条目页
           }
-          patch = date.publishedAt != null ? { publishedAt: date.publishedAt, dateUnknown: false } : { publishedAt: null, dateUnknown: true };
+          patch = date.publishedAt != null ? { publishedAt: date.publishedAt, dateUnknown: false, pubDateSource: "page" } : { publishedAt: null, dateUnknown: true };
         } else {
           // 读的是 AIHOT 自己的条目页：它页面上的时间是事件开始时间，不是原文发布时间，不用
           patch = { publishedAt: null, dateUnknown: true, ...(stale ? { url: permalink, staleOriginal: stale.url, staleOriginalPublishedAt: stale.publishedAt } : {}) };
@@ -204,6 +205,11 @@ export async function fetchMaterial(item, { fetchImpl = fetch, timeoutMs = 12000
           if (verdict.ok) { image = meta.url; imageHint = { logoAlt }; imageReject = null; }
           else imageReject = verdict.reason;
         }
+      }
+      // 原文页面没日期 / 原文抓不到（站点挡）：按 官方 RSS → 包打听给的 X 时间 兜底（pubdate.js）；旧链接退回的不兜底
+      if (aihot && patch.dateUnknown && !stale) {
+        const fb = await fallbackPubDate(item, { fetchImpl, now });
+        if (fb) { patch = { ...patch, publishedAt: fb.publishedAt, dateUnknown: false, pubDateSource: fb.pubDateSource }; date = { publishedAt: fb.publishedAt, dateSource: fb.pubDateSource }; }
       }
       return { url: s.url, text, image, imageHint, imageReject, publishedAt: date.publishedAt, dateSource: date.dateSource, patch };
     } catch { /* 换下一个来源 */ }

@@ -78,6 +78,7 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 - 自动上线已开（`AUTO_PUBLISH = "1"`，2026-10-09 乔木批准）：每轮最多上一条新的，一天最多 40 条（`PIPELINE_MAX_NEW_PER_DAY`），插在当前在播那条后面（时间线 switchAt）。
 - 点评开头跟前后两条撞了：改写点评第一句（一条一天一次），重新校验、重新合成（占额度），再上；改了还撞就这一轮先不上新的。
 - 超龄：超过 6 小时的下线；不足 15 条时用 6–12 小时的旧条目补到 15（越新越先）；超过 12 小时的一律下线，哪怕不足 15 条。15 条门槛和补位永远不挡新条目。全部超过 12 小时时保留最新的那一批（`keptStale`），不出空节目单。
+- 发布时间（`src/pubdate.js`）：① 原文页面 → ② 官方 RSS（按域名查表，现在有 openai.com/news/rss.xml；按链接匹配，去 query / 结尾斜杠）→ ③ 包打听给的厂商官方 X 帖子时间（输入带 `pubDate` + `pubDateSource: "x"`）→ ④ 都没有就不播。永远不用抓取时间。条目上记 `pubDateSource`（page / rss / x）。
 - `use` / `rollback` 之后：下一轮把 6 小时内、没下架的已上线条目（`pipe:index.published`）全部插回，音频按 hash 已在 R2，不再合成。
 - 看状态：`node scripts/release.mjs pipeline [id]`。密钥用 `wrangler secret`：`DEEPSEEK_API_KEY`、`DOUBAO_TTS_ACCESS_TOKEN`。
 

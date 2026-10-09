@@ -163,7 +163,7 @@ export async function writeScript(item, { llm, retries = 1, prevTake = "" } = {}
 
 // 进 seed / 节目单的字段白名单：原文（materialText 等）一律不带。
 // dateUnknown：AIHOT 原文读不出发布时间（publishedAt 为 null）时为 true
-export const SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "dateUnknown", "template", "focus", "kind", "image", "fields", "brief", "script", "take", "lines"];
+export const SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "dateUnknown", "pubDateSource", "template", "focus", "kind", "image", "fields", "brief", "script", "take", "lines"];
 export function toSeedItem(item) {
   const out = {};
   for (const k of SEED_KEYS) if (k in item) out[k] = item[k];

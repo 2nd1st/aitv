@@ -251,7 +251,9 @@ export function parseAIHOT(json, fetchedAt) {
       ...(storyId ? { storyId } : {}),
     });
     // aihotLatestAt 只给补料时判断「原文是不是旧链接」用，不进 seed（writer.js SEED_KEYS 里没有它）
-    return { ...it, dateUnknown: true, ...(Number.isFinite(latest) ? { aihotLatestAt: latest } : {}) };
+    // 包打听若从厂商官方 X 帖子（链到同一个 URL）拿到了发布时间，会带 pubDate + pubDateSource: "x"：原样带上，补料时作第三顺位兜底
+    const xDate = x.pubDateSource === "x" && x.pubDate != null ? { pubDate: x.pubDate, pubDateSource: "x" } : {};
+    return { ...it, dateUnknown: true, ...xDate, ...(Number.isFinite(latest) ? { aihotLatestAt: latest } : {}) };
   });
 }
 
