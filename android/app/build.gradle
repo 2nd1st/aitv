@@ -1,0 +1,61 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+}
+
+android {
+    namespace "ai.qiaomu.aitv"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "ai.qiaomu.aitv"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+        buildConfigField "String", "ORIGIN", "\"https://aitv.qiaomu.ai\""
+    }
+
+    // 发布签名：环境变量 AITV_KEYSTORE / AITV_KEYSTORE_PASSWORD / AITV_KEY_ALIAS / AITV_KEY_PASSWORD。
+    // 没配置时 release 用 debug 签名，assembleRelease 的产物可以直接安装。
+    signingConfigs {
+        release {
+            def ks = System.getenv("AITV_KEYSTORE")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("AITV_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("AITV_KEY_ALIAS")
+                keyPassword System.getenv("AITV_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
+            signingConfig System.getenv("AITV_KEYSTORE") ? signingConfigs.release : signingConfigs.debug
+        }
+        debug {
+            applicationIdSuffix ".debug"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.json:json:20240303" // android.jar 里的 org.json 在 JVM 单测里是空桩
+}

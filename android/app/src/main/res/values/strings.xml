@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI 今天</string>
+    <string name="tagline">持续更新的 AI 新闻台</string>
+    <string name="channel_name">播放</string>
+</resources>

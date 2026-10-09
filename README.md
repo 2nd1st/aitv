@@ -49,6 +49,10 @@ npm run dev
 
 打开 `http://localhost:8787`。`npm run seed` 只把仓库样例写入本地 KV，方便预览画面；不调用模型或语音服务。样例音频和配图存储在独立 R2 中，仓库不包含媒体文件，因此本地预览没有声音和配图。完整收听可使用在线演示；自建实例需要准备自己的媒体与节目单。
 
+## Android 客户端
+
+`android/` 是原生 Android 客户端（minSdk 21，约 85 KB，无第三方运行时依赖），给电视盒子、触屏音箱、旧手机这类不方便用浏览器的设备：打开就播，熄屏和后台继续播，遥控器、媒体键、通知栏都能控制，和网页播的是同一条直播（同一套校时与时间线）。构建与说明见 [android/README.md](android/README.md)。
+
 ## 自建部署
 
 1. 将 `wrangler.example.toml` 复制为 `wrangler.toml`，使用自己的 Worker 名称、KV 命名空间和 R2 桶。仓库原配置指向维护者的演示服务，请勿直接复用。
@@ -115,6 +119,10 @@ npm run dev
 ```
 
 Visit `http://localhost:8787`. The seed command writes only to local KV and starts no paid generation. Repository fixtures support visual preview; audio and images are stored separately in R2 and are not included. Use the live demo to listen, or provide your own media for self-hosting.
+
+## Android app
+
+`android/` contains a native Android client (minSdk 21, ~85 KB, no runtime dependencies) for TV boxes, smart displays and older phones: it starts playing on launch, keeps playing in the background and with the screen off, supports remote/media keys and notification controls, and stays in sync with the web player (same clock sync and timeline). See [android/README.md](android/README.md).
 
 ## Self-hosting
 
