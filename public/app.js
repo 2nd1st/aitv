@@ -1,6 +1,9 @@
 // 时钟、节目单、音频（沃兹）。画面交给 screen/tv.js（艾维）。
-import { createTV } from "/screen/tv.js";
 import { locate, pick, adopt, walk as walkAt } from "/timeline.js";
+// 画面：默认 /screen/（现在这版）；?ui=v4 用艾维的第四版（/screen/v4/，分支 screen-v4 原样拷过来）
+const UI = new URLSearchParams(location.search).get("ui") === "v4" ? "v4" : "default";
+if (UI === "v4") document.querySelector('link[href="/screen/tv.css"]')?.setAttribute("href", "/screen/v4/tv.css");
+const { createTV } = await import(UI === "v4" ? "/screen/v4/tv.js" : "/screen/tv.js");
 
 // 校时：测 7 次往返，取往返最短的那次，偏差 = 服务器时间 - 本地中点
 async function syncClock() {
@@ -198,6 +201,7 @@ const ageTag = Object.assign(document.createElement("div"), { id: "age-tag" });
 ageTag.style.cssText = "position:fixed;top:10px;right:12px;z-index:50;font:12px/1.4 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:10px;pointer-events:none;display:none";
 document.body.appendChild(ageTag);
 function showAge(item) {
+  if (UI === "v4") return; // 第四版自己在来源行标「N 小时前」
   const at = item?.stale ? (item.dateKind === "ranked" ? item.rankedAt : item.publishedAt) : null;
   const txt = at ? `${Math.max(1, Math.floor((now() - at) / 3600e3))} 小时前` : "";
   if (ageTag.textContent !== txt) { ageTag.textContent = txt; ageTag.style.display = txt ? "" : "none"; }
