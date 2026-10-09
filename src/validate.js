@@ -33,7 +33,12 @@ export const UNITS = {
   phScore: { before: "综合分 ", after: " 分" },
   // TechCrunch AI 频道融资稿（sources.js parseTechCrunchAI）：这篇报道的标题 / 简介里明文写的这一轮融资金额，单位美元（只认「$」金额）。
   //   代码按正则从原文字面取，不是模型估的；只在是确数时给（「over $500M」这类不给）；估值、营收不算。只能念成「融资 N 美元」。
-  fundingUsd: { before: "融资 ", after: " 美元" },
+  //   念的时候换成「亿 / 万」：200000000 念成「融资 2 亿美元」，50000000 念成「融资 5000 万美元」（format 只换写法，不改数值）。
+  fundingUsd: {
+    before: "融资 ",
+    after: " 美元",
+    format: (n) => (n >= 1e8 ? `${Number((n / 1e8).toFixed(2))} 亿` : n >= 1e4 ? `${Number((n / 1e4).toFixed(0))} 万` : String(n)),
+  },
 };
 export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name", "limit"]);
 
@@ -60,7 +65,10 @@ export function checkTemplate(template, fields) {
 }
 
 export function renderScript(template, fields) {
-  return template.replace(SLOT, (_, k) => String(fields[k]));
+  return template.replace(SLOT, (_, k) => {
+    const f = UNITS[k]?.format;
+    return f && typeof fields[k] === "number" ? f(fields[k]) : String(fields[k]);
+  });
 }
 
 // 返回 null 表示这条必须丢掉

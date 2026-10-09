@@ -114,7 +114,8 @@ test("融资金额：只认 $ 美元、只认跟融资动作挨着的数；欧�
 });
 
 test("fundingUsd 有单位绑定：只能念「融资 N 美元」；编的数被拦", () => {
-  assert.deepEqual(UNITS.fundingUsd, { before: "融资 ", after: " 美元" });
+  assert.equal(UNITS.fundingUsd.before, "融资 ");
+  assert.equal(UNITS.fundingUsd.after, " 美元");
   const f = { fundingUsd: 200_000_000 };
   assert.ok(buildSpoken("这次融资 {{fundingUsd}} 美元。", f));
   assert.equal(buildSpoken("这次拿了 {{fundingUsd}} 美元。", f), null);
@@ -186,4 +187,11 @@ test("每轮挑 2 条：TechCrunch 量大也挤不掉更新的厂商条目（run
     briefLLM: async () => { throw new Error("不该调"); }, scriptLLM: async () => { throw new Error("不该调"); }, tts: async () => { throw new Error("不该调"); } };
   const out = await runCron(d, { maxNewPerDay: 40 });
   assert.deepEqual(out.log.filter((l) => l.startsWith("新条目")), ["新条目 oai-z", "新条目 tc-1"], out.log.join("\n"));
+});
+
+import { renderScript as _render } from "../src/validate.js";
+test("融资金额念成亿 / 万美元", () => {
+  assert.equal(_render("融资 {{fundingUsd}} 美元", { fundingUsd: 200000000 }), "融资 2 亿 美元");
+  assert.equal(_render("融资 {{fundingUsd}} 美元", { fundingUsd: 1250000000 }), "融资 12.5 亿 美元");
+  assert.equal(_render("融资 {{fundingUsd}} 美元", { fundingUsd: 50000000 }), "融资 5000 万 美元");
 });
