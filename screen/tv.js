@@ -41,12 +41,13 @@ const pad = (n) => String(n).padStart(2, "0");
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 
 const STAT = [
+  ["phDailyRank", (v) => `PH 昨日第 ${fmt.format(v)} 名`],
+  ["phScore", (v) => `综合分 ${fmt.format(v)}`],
   ["points", (v) => `${fmt.format(v)} 分`],
   ["comments", (v) => `${fmt.format(v)} 评论`],
   ["stars_today", (v) => `今日 +${fmt.format(v)} 星`],
   ["starsToday", (v) => `今日 +${fmt.format(v)} 星`],
   ["stars", (v) => `${fmt.format(v)} 星`],
-  ["votes", (v) => `${fmt.format(v)} 票`],
 ];
 const KIND = { product: "产品", project: "开源项目", commentary: "评论", news: "新闻" };
 const PART_LABEL = { what: "是什么", who: "跟你有关", take: "AI 点评", highlight: "亮点" };
