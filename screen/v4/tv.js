@@ -106,6 +106,12 @@ export function createTV(root, { channel = "AI 今天", onListen, onPower, onScr
     setMuted(false);
     (onListen || onPower)?.(Promise.resolve());   // 在这次点击里同步调用，保住浏览器的手势
   }
+  // 静音时的第一下：点哪儿都先出声（包括标题、看原文这些链接），这一下不跳转；出声之后链接照常（沃兹 2026-10-09）
+  picture.addEventListener("click", (e) => {
+    if (!muted) return;
+    e.preventDefault(); e.stopPropagation();
+    doListen();
+  }, true);
   listen.addEventListener("click", (e) => { e.stopPropagation(); doListen(); });
   golive.addEventListener("click", (e) => { e.stopPropagation(); onGoLive?.(); });
   picture.addEventListener("click", (e) => {
