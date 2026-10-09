@@ -48,7 +48,7 @@ const cache = new Map();
 let primed = null; // { audio, url, t }：switchAt 之后第一条，next 一到就预加载好，切换时不卡
 function audioFor(item) {
   if (!cache.has(item.audio)) {
-    const a = new Audio(item.audio); a.preload = "auto"; cache.set(item.audio, a);
+    const a = new Audio(item.audio); a.preload = "auto"; a.muted = !on; cache.set(item.audio, a);
     if (cache.size > 5) {
       for (const [k, old] of cache) {
         if (old !== playing?.audio && old !== primed?.audio) { cache.delete(k); break; }
@@ -100,6 +100,18 @@ function seekWhenReady(a, url) {
   if (a.readyState < 3) a.addEventListener("canplay", apply, { once: true });
 }
 
+// 点之前就静音跟着直播在放（浏览器允许静音自动播放）：点一下只是取消静音，几乎没有延迟。
+// 浏览器不让静音自动播放（warmBlocked）时退一步：每秒把当前这条定位到直播位置附近（只缓冲、不播），点的时候只差一点点。
+let warmBlocked = false;
+const playA = (a) => a.play().catch(() => { if (!on) warmBlocked = true; });
+let lastPos = 0;
+function positionOnly(item, t) {
+  const a = audioFor(item), ms = performance.now();
+  if (ms - lastPos < 1000 || a.readyState < 1 || a.seeking) return;
+  lastPos = ms;
+  if (Math.abs(a.currentTime - t) > 1) a.currentTime = Math.min(t + 0.5, (a.duration || Infinity) - 0.05);
+}
+
 let lastFix = 0;
 function syncAudio(item, t) {
   const a = audioFor(item);
@@ -111,7 +123,7 @@ function syncAudio(item, t) {
     a.addEventListener("playing", () => { rec.playingAt = now(); rec.stallMs = Math.round(rec.playingAt - rec.at); }, { once: true });
     // 预加载好的那条已经停在正确位置：差得不多就不 seek（seek 本身要等几百毫秒），直接放，漂移交给后面的校正
     if (a.readyState >= 1 && Math.abs(a.currentTime - t) > 0.25) a.currentTime = Math.max(0, t);
-    a.play().catch(() => {});      // 开机那次点击里同步调用，保住手势
+    playA(a);                       // 开机那次点击里同步调用，保住手势
     seekWhenReady(a, item.audio);
     prefetchAround(vnow());
     return;
@@ -119,7 +131,7 @@ function syncAudio(item, t) {
   // 暂停后继续：从时间线上的位置接着放
   if (a.paused && !a.ended && !(t >= (a.duration || Infinity) - 0.05)) {
     if (a.readyState >= 1) a.currentTime = Math.max(0, t);
-    a.play().catch(() => {});
+    playA(a);
     seekWhenReady(a, item.audio);
     return;
   }
@@ -157,9 +169,13 @@ function goLive() {
 function listen() {
   on = true;
   tv?.setMuted?.(false);
+  for (const a of cache.values()) a.muted = false; // 已经静音在放的话，这一下就出声
   const { item, t } = here();
+  if (playing && playing.audio.paused) playing.audio.play().catch(() => {}); // 在这次点击里同步调用，保住手势
   syncAudio(item, t);
+  tapLog.push({ at: performance.now(), wasPlaying: playing ? !playing.audio.paused : false, warmBlocked });
 }
+const tapLog = [];
 const tv = createTV(document.getElementById("root"), {
   onListen: listen,
   onPower: listen,
@@ -191,11 +207,11 @@ function frame() {
   const n = vnow();
   const { item, t } = here(n);
   showAge(item);
-  if (on && !paused) syncAudio(item, t);
+  if (!paused) { if (on || !warmBlocked) syncAudio(item, t); else positionOnly(item, t); }
   // 暂停时画面定格；时钟仍走服务器时间
   tv.render(item, t, now(), { mode: "live", upcoming: upcoming(n) });
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__aitv.player = { switchLog, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
+window.__aitv.player = { switchLog, tapLog, get warmBlocked() { return warmBlocked; }, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
   drift() { const a = playing?.audio; if (!a) return null; const { t } = here(); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };
