@@ -80,7 +80,7 @@ test("RSS 挂了 / 域名不在表里：不兜底（没有 X 时间就不播）"
 test("流水线：RSS 兜底拿到日期的条目继续往下走，进节目单的条目带 pubDateSource", async () => {
   const it = aihot("https://openai.com/index/oracle/");
   const st = await advance({ id: it.id, item: it, step: "read", status: "pending", results: {}, tries: {}, errors: [] },
-    { now: T, fetch: site(), briefLLM: async () => { throw new Error("模型出错：停在 brief"); } });
+    { now: Date.parse("2026-10-08T17:00:00Z"), fetch: site(), briefLLM: async () => { throw new Error("模型出错：停在 brief"); } }); // RSS 时间 1 小时后
   assert.equal(st.step, "brief"); assert.notEqual(st.status, "dropped");
   assert.equal(st.results.read.patch.pubDateSource, "rss");
 });
@@ -92,4 +92,12 @@ test("AIHOT 输入里带 X 时间（pubDateSource: x）才透传", () => {
   ] }, T);
   assert.equal(a.pubDateSource, "x"); assert.equal(a.pubDate, "2026-10-08T00:00:00Z");
   assert.ok(!("pubDateSource" in b));
+});
+
+test("流水线：RSS 兜底拿到的日期超过 6 小时 → skipped:stale，不进 brief", async () => {
+  const it = aihot("https://openai.com/index/oracle/");
+  let calls = 0;
+  const st = await advance({ id: it.id, item: it, step: "read", status: "pending", results: {}, tries: {}, errors: [] },
+    { now: T, fetch: site(), briefLLM: async () => { calls++; return "{}"; } });
+  assert.equal(st.status, "skipped"); assert.match(st.why, /^stale/); assert.equal(calls, 0);
 });

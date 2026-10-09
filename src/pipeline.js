@@ -26,6 +26,15 @@ const day = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10).replace
 
 class Drop extends Error {}   // 内容不合格：直接丢，不重试
 class Wait extends Error {}   // 今天额度用完 / 这条今天试够了：明天再来
+class Stale extends Error {}  // 发布超过 6 小时：跳过（skipped:stale），不做摘要、不合成
+
+// 新鲜度（乔布斯 2026-10-09）：按「来源给的真实发布时间」publishedAt 算，不按抓取时间。
+// HN = 帖子发到 HN 的时间；PH 日榜 = featuredAt（上 PH 首页的时间）；AIHOT = 原文 / 官方 RSS / 官方 X 帖的时间。
+// GitHub Trending 没有发布时间（publishedAt = null）：这一条规则管不到它，照常走（已报给产品）。
+export const STALE_MS = 6 * 3600_000;
+export const pubAge = (it, now) => (it?.publishedAt == null ? null : now - it.publishedAt);
+export const isStale = (it, now) => { const a = pubAge(it, now); return a != null && a > STALE_MS; };
+const staleWhy = (it, now) => `stale：发布于 ${new Date(it.publishedAt).toISOString()}，已经 ${(pubAge(it, now) / 3600e3).toFixed(1)} 小时（超过 6 小时）`;
 
 // ---------- 每一步 ----------
 const step = {
@@ -34,6 +43,8 @@ const step = {
     if (!m) throw new Error("原文读不到");
     // 发布时间读不到（AIHOT 原文没日期、或原文是旧链接退回了 links.aihot）：不播，不拿抓取时间顶替
     if (m.patch?.dateUnknown || (st.item.dateUnknown && m.patch?.publishedAt == null)) throw new Drop("发布时间读不到，不播");
+    const it = { ...st.item, ...(m.patch || {}) };
+    if (isStale(it, d.now)) throw new Stale(staleWhy(it, d.now)); // AIHOT：读到原文日期后马上判，摘要之前
     return m; // { url, text, image }（原文只存在流水线自己的 KV 里，不进 seed / 节目单）
   },
   async brief(st, d) {
@@ -126,6 +137,9 @@ export async function advance(st, d, { save, deadline = Infinity } = {}) {
     if (Date.now() > deadline) break;
     const name = st.step;
     if (name === "done") break;
+    // 每一步（摘要 / 稿子 / 合成）之前都先看发布时间：在途时变旧了（比如等额度等到第二天）也不再花钱
+    const cur = itemOf(st);
+    if (name !== "read" && isStale(cur, d.now)) { st.status = "skipped"; st.why = staleWhy(cur, d.now); st.updatedAt = d.now; if (save) await save(st); break; }
     st.tries[name] = (st.tries[name] || 0) + 1;
     let later = false;
     try {
@@ -141,7 +155,8 @@ export async function advance(st, d, { save, deadline = Infinity } = {}) {
     } catch (e) {
       const msg = String(e.message || e).slice(0, 300);
       st.errors.push({ step: name, at: d.now, msg });
-      if (e instanceof Drop) { st.status = "dropped"; st.why = msg; }
+      if (e instanceof Stale) { st.status = "skipped"; st.why = msg; }
+      else if (e instanceof Drop) { st.status = "dropped"; st.why = msg; }
       else if (e instanceof Wait) { st.status = "waiting"; st.why = msg; st.tries[name]--; }
       // 合成失败：每日额度管重试（同一条一天最多两次）；累计失败 4 次（两天）就丢
       else if (name === "tts") { const n = st.errors.filter((x) => x.step === "tts" && !/额度|试过/.test(x.msg)).length; st.status = n >= 4 ? "dropped" : "waiting"; st.why = `合成失败：${msg}`; }
@@ -211,7 +226,8 @@ export function planPublish(tl, now, { newItem = null, reinsert = [], takedown }
   const eff = effective(tl, now);
   if (!eff) return { ok: false, reason: "KV 里没有时间线" };
   const target = eff.next || eff.current;
-  const insert = [newItem, ...reinsert].filter(Boolean).filter((x) => !takedownMatches(takedown, x));
+  if (newItem && isStale(newItem, now)) newItem = null; // 上线这一刻再把关一次：发布超过 6 小时的不插
+  const insert = [newItem, ...reinsert].filter(Boolean).filter((x) => !takedownMatches(takedown, x) && !isStale(x, now));
   const insIds = new Set(insert.map((x) => x.id));
   const base = target.items.filter((x) => !insIds.has(x.id));
   const kept = dropOld(base, now);
@@ -257,8 +273,11 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
       const r = await fetchAll({ fetchImpl: d.fetch, now });
       const onAir = new Set([...(eff?.current.items || []), ...(eff?.next?.items || [])].map((x) => x.id));
       const cands = interleave(dedupe(r.items, new Set([...idx.seen, ...onAir])));
-      const pick = cands.find((c) => checkSafety(c).ok);
-      log.push(`抓到 ${r.items.length} 条，新候选 ${cands.length}${Object.keys(r.errors).length ? `，失败源 ${JSON.stringify(r.errors)}` : ""}`);
+      // 先按发布时间筛：超过 6 小时的直接跳过（skipped:stale），不读原文、不做摘要、不合成
+      const stale = cands.filter((c) => isStale(c, now));
+      const pick = cands.find((c) => !isStale(c, now) && checkSafety(c).ok);
+      log.push(`抓到 ${r.items.length} 条，新候选 ${cands.length}，其中超过 6 小时跳过 ${stale.length}${Object.keys(r.errors).length ? `，失败源 ${JSON.stringify(r.errors)}` : ""}`);
+      idx.skipped = [...(idx.skipped || []), ...stale.map((c) => ({ id: c.id, why: "stale", publishedAt: c.publishedAt, at: now }))].slice(-300);
       if (pick) {
         const st = { id: pick.id, item: pick, step: "read", status: "pending", results: {}, tries: {}, errors: [], createdAt: now, updatedAt: now };
         await kv.put(`pipe:item:${pick.id}`, st);
@@ -266,7 +285,7 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
         log.push(`新条目 ${pick.id}`);
       }
       // 标记看过（只用来不重复处理同一条新闻；下架不按 id，按稿子 hash）
-      idx.seen = [...new Set([...idx.seen, ...(pick ? [pick.id] : [])])].slice(-SEEN_MAX);
+      idx.seen = [...new Set([...idx.seen, ...stale.map((c) => c.id), ...(pick ? [pick.id] : [])])].slice(-SEEN_MAX);
     }
     // 2. 推进在途的
     for (const id of [...idx.pending]) {
@@ -276,6 +295,7 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
       st = await advance(st, { ...d }, { save: (s) => kv.put(`pipe:item:${id}`, s), deadline });
       log.push(`${id}：${st.status} @${st.step}${st.why ? `（${st.why}）` : ""}`);
       if (st.status === "ready") { idx.pending = idx.pending.filter((x) => x !== id); idx.ready.push(id); }
+      if (st.status === "skipped") { idx.pending = idx.pending.filter((x) => x !== id); idx.skipped = [...(idx.skipped || []), { id, why: "stale", step: st.step, publishedAt: itemOf(st).publishedAt ?? null, at: now }].slice(-300); }
       if (st.status === "dropped") { idx.pending = idx.pending.filter((x) => x !== id); idx.dropped = [...idx.dropped, { id, step: st.step, why: st.why, at: now }].slice(-200); }
     }
     // 3. 上线：最多一条新的 + 插回被 use / rollback 拿掉的已上线条目 + 下线超龄的
@@ -289,12 +309,20 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
     for (const p of idx.published) {
       const st = await kv.get(`pipe:item:${p.id}`);
       const it = st?.seedItem;
-      if (!it || onAirKeys.has(keyOf(it)) || ageOf(it, now) > FRESH_MS || takedownMatches(d.takedown, it)) continue;
+      if (!it || onAirKeys.has(keyOf(it)) || ageOf(it, now) > FRESH_MS || isStale(it, now) || takedownMatches(d.takedown, it)) continue;
       if (!(await d.r2.head(it.audio.replace(/^\/audio\//, "")))) continue;
       reinsert.push(it);
     }
     let readyId = idx.ready[0], readySt = readyId ? await kv.get(`pipe:item:${readyId}`) : null;
     if (readySt && takedownMatches(d.takedown, readySt.seedItem)) { idx.ready = idx.ready.slice(1); readySt = null; readyId = null; }
+    // 上线前再看一次发布时间：做好了但已经超过 6 小时的不上
+    if (readySt && isStale(readySt.seedItem, now)) {
+      log.push(`${readyId}：做好了但${staleWhy(readySt.seedItem, now)}，不上`);
+      idx.ready = idx.ready.slice(1);
+      idx.skipped = [...(idx.skipped || []), { id: readyId, why: "stale", step: "insert", publishedAt: readySt.seedItem.publishedAt, at: now }].slice(-300);
+      await kv.put(`pipe:item:${readyId}`, { ...readySt, status: "skipped", why: staleWhy(readySt.seedItem, now) });
+      readySt = null; readyId = null;
+    }
     let p = planPublish(onAirTl, now, { newItem: readySt?.seedItem || null, reinsert, takedown: d.takedown });
     // 点评开头撞车：改写第一句（一条一天一次）→ 重新校验 → 重新合成 → 再排一次
     if (p.ok && p.clash && autoPublish) {
@@ -322,7 +350,7 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
         for (const id of p.inserted) {
           idx.ready = idx.ready.filter((x) => x !== id);
           idx.published.push({ id, at: now });
-          const st = await kv.get(`pipe:item:${id}`); st.status = "published"; st.publishedAt = now; await kv.put(`pipe:item:${id}`, st);
+          const st = await kv.get(`pipe:item:${id}`); st.status = "published"; st.airedAt = now; await kv.put(`pipe:item:${id}`, st);
         }
         log.push(`时间线已更新：新上 ${p.inserted.join(",") || "无"}，插回 ${p.reinserted.length} 条，下线 ${p.dropped} 条，${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条${p.keptStale ? "（全部超过 12 小时，保留了最新一批）" : ""}`);
       } else log.push(`自动上线关闭；如果打开：${new Date(p.timeline.switchAt ?? now).toISOString()} 生效，共 ${p.count} 条（新上 ${p.inserted.length}、插回 ${p.reinserted.length}、下线 ${p.dropped}）`);

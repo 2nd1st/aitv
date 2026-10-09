@@ -30,7 +30,7 @@ test("原文能读到日期：照常往下走，publishedAt 是原文时间（�
   assert.equal(m.patch.publishedAt, Date.parse("2026-10-08T16:00:00Z"));
   assert.notEqual(m.patch.publishedAt, T);
   const st = await advance({ id: aihot.id, item: aihot, step: "read", status: "pending", results: {}, tries: {}, errors: [] },
-    { now: T, fetch: fetchOf(html), briefLLM: async () => { throw new Error("模型出错：停在这"); } });
+    { now: Date.parse("2026-10-08T17:00:00Z"), fetch: fetchOf(html), briefLLM: async () => { throw new Error("模型出错：停在这"); } }); // 发布 1 小时后（6 小时内才往下走）
   assert.notEqual(st.status, "dropped");
   assert.equal(st.step, "brief");
 });
