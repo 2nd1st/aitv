@@ -42,12 +42,25 @@ AITV 把 AI 资讯整理成连续播放的节目。浏览器根据音频与时�
 git clone https://github.com/joeseesun/aitv.git
 cd aitv
 npm install -g wrangler
+npm install
 npm test
 npm run seed
 npm run dev
 ```
 
 打开 `http://localhost:8787`。`npm run seed` 只把仓库样例写入本地 KV，方便预览画面；不调用模型或语音服务。样例音频和配图存储在独立 R2 中，仓库不包含媒体文件，因此本地预览没有声音和配图。完整收听可使用在线演示；自建实例需要准备自己的媒体与节目单。
+
+## 老设备与 Android App
+
+系统 WebView 停在旧版本的安卓设备（例如 Android 8 的电视盒子、触屏音箱，内核 Chrome 61）打不开主站：脚本语法和 CSS 太新。`npm run build` 会额外生成兼容版 `/legacy/`（esbuild 降级到 chrome61，补齐缺的 API，用 JS 计算原来靠 container query 单位缩放的画面），全屏铺满、去掉页脚。
+
+`android/` 是一个约 70 KB 的 App 壳（minSdk 21，纯系统 WebView，无第三方依赖）：打开即自动开机出声，屏幕常亮，遥控器确定键或播放键暂停/继续，离开 App 停声、回来追到直播，支持 Android TV 启动器。WebView 够新（Chrome 105+）时加载主站，否则加载 `/legacy/`；兼容版页面文件随 APK 打包，节目单、音频和配图仍从线上获取。
+
+```bash
+npm run android    # 产物：android/app/build/outputs/apk/release/app-release.apk
+```
+
+需要 JDK 17+ 与 Android SDK（`android/local.properties` 写 `sdk.dir`，或设置 `ANDROID_HOME`）。本地预览兼容版：`npm run legacy:serve`，设备上 `adb reverse tcp:8788 tcp:8788` 后打开 `http://localhost:8788/legacy/`。详见 [android/README.md](android/README.md)。
 
 ## 自建部署
 
@@ -109,12 +122,17 @@ Requirements: Node.js 22+ and Wrangler 4.
 git clone https://github.com/joeseesun/aitv.git
 cd aitv
 npm install -g wrangler
+npm install
 npm test
 npm run seed
 npm run dev
 ```
 
 Visit `http://localhost:8787`. The seed command writes only to local KV and starts no paid generation. Repository fixtures support visual preview; audio and images are stored separately in R2 and are not included. Use the live demo to listen, or provide your own media for self-hosting.
+
+## Older Android devices and the app
+
+Devices whose system WebView is stuck on an old Chromium (e.g. Android 8 TV boxes and smart displays on Chrome 61) cannot run the main site. `npm run build` also emits a compatibility build at `/legacy/` (esbuild down-levelled to chrome61, polyfills, JS replacement for container-query units, full-screen layout). `android/` contains a ~70 KB WebView shell (minSdk 21, no dependencies) that auto-starts playback, keeps the screen on, maps remote-control keys and appears in the Android TV launcher. It loads the main site on Chrome 105+ WebViews and the bundled `/legacy/` page otherwise. Build it with `npm run android`; see [android/README.md](android/README.md).
 
 ## Self-hosting
 

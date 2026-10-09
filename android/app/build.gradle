@@ -1,0 +1,66 @@
+plugins {
+    id "com.android.application"
+}
+
+// 兼容版网页（public/legacy/，由仓库根目录的 npm run build 生成）打进 APK 的 assets/legacy/。
+// 系统 WebView 太老时 App 加载 /legacy/，请求由 APK 里的这份文件响应，API 和音频仍走线上。
+def legacyDir = file("../../public/legacy")
+def generatedAssets = layout.buildDirectory.dir("generated/aitv-assets")
+def copyLegacy = tasks.register("copyLegacyWeb", Copy) {
+    doFirst {
+        if (!legacyDir.exists()) throw new GradleException("缺少 public/legacy/：先在仓库根目录运行 npm install && npm run build")
+    }
+    from legacyDir
+    into generatedAssets.map { it.dir("legacy") }
+}
+preBuild.dependsOn copyLegacy
+
+android {
+    namespace "ai.qiaomu.aitv"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "ai.qiaomu.aitv"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    sourceSets {
+        main.assets.srcDir generatedAssets
+    }
+
+    // 发布签名：环境变量 AITV_KEYSTORE / AITV_KEYSTORE_PASSWORD / AITV_KEY_ALIAS / AITV_KEY_PASSWORD。
+    // 没配置时 release 用 debug 签名，保证 assembleRelease 出来的 APK 能直接装。
+    signingConfigs {
+        release {
+            def ks = System.getenv("AITV_KEYSTORE")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("AITV_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("AITV_KEY_ALIAS")
+                keyPassword System.getenv("AITV_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv("AITV_KEYSTORE") ? signingConfigs.release : signingConfigs.debug
+        }
+        debug {
+            applicationIdSuffix ".debug"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
