@@ -40,6 +40,7 @@ test("Product Hunt：标题、标语、链接", () => {
   assert.equal(items.length, 3);
   items.forEach(shape);
   assert.ok(items.every((x) => x.url.startsWith("https://www.producthunt.com/")));
+  assert.ok(items.every((x) => !("rank" in x.fields)), "feed 顺序不是排名，不能给 rank");
 });
 
 test("AIHOT：中文标题和信源数", () => {
