@@ -190,3 +190,11 @@ test("验收第三版：不夸大、点评不套「今天 / 如果你」、HN �
   assert.match(p, /不夸大/);
   assert.ok(scriptFields(hn).limit);
 });
+
+test("数字只是佐证：整条最多一个数字字段，part1 不许有", () => {
+  const f = scriptFields(item);
+  assert.equal(checkScript([good.part1, good.part2, good.part3], f).ok, true); // part2 里一个 {{starsToday}}
+  assert.equal(checkScript([good.part1 + "累计 {{stars}} 颗星。", good.part2.replace("今天新增 {{starsToday}} 颗星，", ""), good.part3], f).ok, false);
+  assert.equal(checkScript([good.part1, good.part2 + "累计 {{stars}} 颗星。", good.part3], f).ok, false);
+  assert.match(scriptPrompt(item), /整条最多引用一个数字字段/);
+});

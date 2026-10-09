@@ -1,9 +1,10 @@
 import { serveAudio } from "./audio.js";
+import { serveImage } from "./images.js";
 import { buildSchedule, publicItem } from "./schedule.js";
 
 // 节目单来源：KV（namespace SCHEDULE）
 //   "pointer"         → { version, previous }   线上指针，切换 / 回滚只改这一个 key
-//   "seed:<version>"  → 该版本的 seed.json（音频在 R2：<version>/<file>.mp3，对外 /audio/<version>/<file>.mp3）
+//   "seed:<version>"  → 该版本的 seed.json（音频在 R2：<hash>.mp3，对外 /audio/<hash>.mp3；配图在 R2 img/<key>，对外 /img/<key>）
 export async function loadSeed(env) {
   const ptr = await env.SCHEDULE.get("pointer", "json");
   if (!ptr?.version) throw new Error("KV 里没有线上指针");
@@ -28,6 +29,7 @@ export default {
       return Response.json({ version: seed.version, ...sched }, { headers: { "cache-control": "no-store" } });
     }
     if (url.pathname.startsWith("/audio/")) return serveAudio(req, env);
+    if (url.pathname.startsWith("/img/")) return serveImage(req, env);
     return env.ASSETS.fetch(req);
   },
   // 每 15 分钟：抓榜 → 写稿 → 校验 → 语音 → 出节目单。失败时保留上一份。

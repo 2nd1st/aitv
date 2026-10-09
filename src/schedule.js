@@ -1,8 +1,11 @@
 // 原文（补料时读的页面正文）只用来提炼 brief，不进节目单：对外只留 brief + url。
+export const SAFE_IMAGE = /^\/img\/[0-9a-f]{16}\.(jpg|png|webp)$/;
 const PRIVATE_KEYS = ["materialText", "material", "lines", "briefError"];
 export function publicItem(it) {
   const out = { ...it };
   for (const k of PRIVATE_KEYS) delete out[k];
+  // 配图只许是自家 R2 的 /img/<key>，第三方地址一律不进节目单
+  if ("image" in out && !SAFE_IMAGE.test(String(out.image))) out.image = null;
   return out;
 }
 

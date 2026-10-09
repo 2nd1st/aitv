@@ -2,6 +2,7 @@
 // （模板 + 校验；相邻两条点评开头不能一样，所以写稿按播出顺序逐条来）→ stdout（JSON）。
 // 用法：node scripts/build-items.mjs 20 > /tmp/items.json   （需要 DEEPSEEK_API_KEY）
 // 统计（每源条数、丢弃原因）写到 stderr 和 /tmp/aitv-build-stats.json。
+import { cacheItemImages } from "./r2-images.mjs";
 import { writeFileSync } from "node:fs";
 import { fetchAll, dedupe, interleave } from "../src/sources.js";
 import { enrich } from "../src/enrich.js";
@@ -78,10 +79,13 @@ for (const e of order) {
   log(`✓ script [${e.source}] ${e.kind} ${e.fields.title.slice(0, 40)}（第 ${s.attempts} 次通过，${s.lines.join("").length} 字）`);
 }
 
+// 封面图转存到自家 R2（/img/<key>），第三方地址不进节目单
+const withImage = await cacheItemImages(out, { log });
+
 const perSource = {}, perKind = {};
 for (const p of out) { perSource[p.source] = (perSource[p.source] || 0) + 1; perKind[p.kind] = (perKind[p.kind] || 0) + 1; }
 const unused = order.filter((e) => !out.some((o) => o.id === e.id) && !dropped.some((d) => d.id === e.id)).length;
-const stats = { picked: out.length, perSource, perKind, dropped, takeOpeningRewrites: rewrites, unusedBuffer: unused, sourceErrors: errors };
+const stats = { picked: out.length, perSource, perKind, withImage, dropped, takeOpeningRewrites: rewrites, unusedBuffer: unused, sourceErrors: errors };
 writeFileSync("/tmp/aitv-build-stats.json", JSON.stringify(stats, null, 1));
 log(`取 ${out.length} 条 ${JSON.stringify(perSource)} ${JSON.stringify(perKind)}；丢 ${dropped.length} 条；备用没用上 ${unused} 条`);
 process.stdout.write(JSON.stringify(out, null, 1));

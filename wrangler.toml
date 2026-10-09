@@ -6,7 +6,7 @@ routes = [{ pattern = "aitv.qiaomu.ai", custom_domain = true }]
 [assets]
 directory = "public"
 binding = "ASSETS"
-run_worker_first = ["/api/*", "/audio/*"]
+run_worker_first = ["/api/*", "/audio/*", "/img/*"]
 
 # 节目单指针和各版本 seed 放 KV；音频放 R2（支持 Range）
 [[kv_namespaces]]
