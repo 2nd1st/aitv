@@ -30,6 +30,9 @@ let [clock, body, { createTV }] = await Promise.all([initialClock(), loadSchedul
 // state = { current, next, switchAt }：到 switchAt（条目边界，所有设备同一个服务器时钟）才换成 next，不会在一条中间切
 let state = adopt(body);
 showStatus();
+status.className = "playback-status";
+const retryButton = document.getElementById("player-retry");
+retryButton.addEventListener("click", () => listen());
 const now = () => performance.timeOrigin + performance.now() + clock.offset;
 
 // 每分钟重新校时 + 拉节目单。服务器保证 switchAt 至少在 90 秒后，所以切换前一定能拿到 next。
@@ -47,10 +50,19 @@ async function refresh() {
   } finally { refreshing = false; }
 }
 setInterval(refresh, 60000);
-window.addEventListener("online", refresh);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+window.addEventListener("online", () => { refresh(); recoverAudio(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { refresh(); audioTick(); } });
 
 let on = false, playing = null; // playing: { id, audio }
+let blocked = false, audioMessage = "", playEpoch = 0, pendingPlay = null;
+let lastAttempt = -Infinity, lastProgress = 0, progressTime = 0, lastReload = -Infinity;
+function playbackStatus(message = audioMessage) {
+  audioMessage = message;
+  showStatus(on && !paused ? message : "");
+  retryButton.hidden = !on || paused || !message;
+  retryButton.textContent = blocked ? "点击恢复声音" : "重新连接声音";
+}
+function cancelPlay() { playEpoch++; pendingPlay = null; }
 const switchLog = []; // 每次换条：什么时候开始换、什么时候真的出声（playing 事件），用来量切换有没有卡
 
 // 预取：当前和下一条的音频。按音频地址缓存（不同版本同 id 不会串）
@@ -59,9 +71,21 @@ let primed = null; // { audio, url, t }：switchAt 之后第一条，next 一到
 function audioFor(item) {
   if (!cache.has(item.audio)) {
     const a = new Audio(item.audio); a.preload = "auto"; a.muted = !on; cache.set(item.audio, a);
+    const active = () => playing?.audio === a && !paused;
+    for (const event of ["waiting", "stalled", "seeking"]) a.addEventListener(event, () => {
+      if (active() && !blocked) playbackStatus("声音正在缓冲…");
+    });
+    a.addEventListener("playing", () => {
+      if (!active()) return;
+      blocked = false; if (on) tv.setMuted?.(false);
+      lastProgress = performance.now(); progressTime = a.currentTime;
+      playbackStatus("");
+    });
+    a.addEventListener("error", () => { if (active()) playbackStatus("声音加载失败，正在重试…"); });
+    a.addEventListener("ended", () => { if (active()) scheduleAudioTick(); });
     if (cache.size > 5) {
       for (const [k, old] of cache) {
-        if (old !== playing?.audio && old !== primed?.audio) { cache.delete(k); break; }
+        if (old !== playing?.audio && old !== primed?.audio) { cache.delete(k); old.pause(); old.removeAttribute("src"); old.load(); break; }
       }
     }
   }
@@ -113,7 +137,22 @@ function seekWhenReady(a, url) {
 // 点之前就静音跟着直播在放（浏览器允许静音自动播放）：点一下只是取消静音，几乎没有延迟。
 // 浏览器不让静音自动播放（warmBlocked）时退一步：每秒把当前这条定位到直播位置附近（只缓冲、不播），点的时候只差一点点。
 let warmBlocked = false;
-const playA = (a) => a.play().catch(() => { if (!on) warmBlocked = true; });
+function playA(a, force = false) {
+  if (blocked || pendingPlay || (!force && performance.now() - lastAttempt < 1000)) return;
+  const epoch = playEpoch;
+  lastAttempt = performance.now();
+  // User gestures may supersede a pending muted attempt; old rejections are ignored.
+  const attempt = { epoch }; pendingPlay = attempt;
+  a.play().catch(error => {
+    if (epoch !== playEpoch || playing?.audio !== a || paused) return;
+    if (error.name === "AbortError") return;
+    if (!on) { warmBlocked = true; return; }
+    if (error.name === "NotAllowedError") {
+      blocked = true; tv.setMuted?.(true);
+      playbackStatus("浏览器暂停了声音，请点击恢复");
+    } else playbackStatus("声音加载失败，正在重试…");
+  }).finally(() => { if (pendingPlay === attempt) pendingPlay = null; });
+}
 let lastPos = 0;
 function positionOnly(item, t) {
   const a = audioFor(item), ms = performance.now();
@@ -128,8 +167,11 @@ function syncAudio(item, t) {
   const a = audioFor(item);
   if (!playing || playing.audio !== a) {
     if (playing) playing.audio.pause();
+    cancelPlay(); blocked = false; lastAttempt = -Infinity;
     const kind = playing ? "switch" : "start";
     playing = { id: item.id, audio: a };
+    lastProgress = performance.now(); progressTime = a.currentTime;
+    playbackStatus(a.readyState < 3 ? "声音正在缓冲…" : "");
     const rec = { id: item.id, kind, at: now(), ready: a.readyState, primed: primed?.audio === a };
     switchLog.push(rec); if (switchLog.length > 20) switchLog.shift();
     a.addEventListener("playing", () => { rec.playingAt = now(); rec.stallMs = Math.round(rec.playingAt - rec.at); }, { once: true });
@@ -142,14 +184,15 @@ function syncAudio(item, t) {
   }
   // 暂停后继续：从时间线上的位置接着放
   if (a.paused && !a.ended && !(t >= (a.duration || Infinity) - 0.05)) {
-    if (a.readyState >= 1) a.currentTime = Math.max(0, t);
+    if (blocked || pendingPlay || performance.now() - lastAttempt < 1000) return;
+    if (a.readyState >= 1 && Math.abs(a.currentTime - t) > 0.25) a.currentTime = Math.max(0, t);
     playA(a);
     seekWhenReady(a, item.audio);
     return;
   }
   // 漂移超过 0.25 秒就拉回来：只在缓冲够了、没在 seek 的时候，且最多每秒一次，避免来回拉扯
   const ms = performance.now();
-  if (!a.paused && !a.seeking && a.readyState >= 3 && ms - lastFix > 1000 &&
+  if (!blocked && !audioMessage && !a.paused && !a.seeking && a.readyState >= 3 && ms - lastFix > 1000 &&
       Math.abs(a.currentTime - t) > 0.25 && t < a.duration - 0.05) {
     a.currentTime = t; lastFix = ms;
   }
@@ -159,13 +202,16 @@ function pause() {
   if (paused || !on) return;
   frozenAt = now() - lag;   // 画面定格在这一刻
   paused = true;
+  cancelPlay();
   playing?.audio.pause();
+  playbackStatus("");
   tv.setPaused(true);
 }
 function resume() {
   if (!paused) return;
   lag = now() - frozenAt;   // 从暂停处接着播
   paused = false;
+  cancelPlay(); blocked = false; lastAttempt = -Infinity;
   tv.setPaused(false);
   const { item, t } = here();
   syncAudio(item, t);
@@ -180,19 +226,23 @@ function goLive() {
 // 第一次点击里同步起播（保住手势）。screen-v4 叫 onListen，旧画面叫 onPower，两个都给。
 function listen() {
   if (document.activeElement?.matches(".tv-power,.listen")) document.activeElement.blur();
-  on = true;
+  const reload = playing?.audio?.error || (audioMessage && !blocked);
+  on = true; paused = false;
+  cancelPlay(); blocked = false; warmBlocked = false; lastAttempt = -Infinity;
+  tv?.setPaused(false);
   tv?.setMuted?.(false);
   for (const a of cache.values()) a.muted = false; // 已经静音在放的话，这一下就出声
   const { item, t } = here();
-  if (playing && playing.audio.paused) playing.audio.play().catch(() => {}); // 在这次点击里同步调用，保住手势
+  if (reload && playing?.audio === cache.get(item?.audio)) playing.audio.load();
   syncAudio(item, t);
+  if (playing && !pendingPlay) playA(playing.audio, true);
   tapLog.push({ at: performance.now(), wasPlaying: playing ? !playing.audio.paused : false, warmBlocked });
 }
 const tapLog = [];
 const tv = createTV(document.getElementById("root"), {
   onListen: listen,
   onPower: listen,
-  onScreenClick: () => (paused ? resume() : pause()),
+  onScreenClick: () => (blocked ? listen() : paused ? resume() : pause()),
   onGoLive: goLive,
 });
 
@@ -232,30 +282,61 @@ function warmNext(ms) {
   if (a.readyState < 3 && a.networkState !== 2 /* 没在加载 */) a.load();
 }
 
-function frame() {
-  const n = vnow();
-  const { item, t } = here(n);
+// Audio events and a separate timer keep playback moving when rendering stops.
+// Browsers may suspend the whole page on lock; foreground/online reconnect too.
+let audioTimer;
+function scheduleAudioTick() {
+  clearTimeout(audioTimer);
+  const { item, t } = here();
+  const boundary = item ? Math.max(20, (item.duration - t) * 1000) : 250;
+  audioTimer = setTimeout(audioTick, Math.min(250, boundary));
+}
+function recoverAudio() {
+  const a = playing?.audio;
+  if (!a || paused || blocked) return;
+  cancelPlay(); lastAttempt = -Infinity; lastReload = performance.now();
+  lastProgress = lastReload; progressTime = a.currentTime;
+  playbackStatus("声音正在缓冲…");
+  a.load(); seekWhenReady(a, a.getAttribute("src")); playA(a, true);
+}
+function audioTick() {
+  const n = vnow(), { item, t } = here(n);
   if (!item) {
     playing?.audio.pause(); playing = null;
     showStatus("暂无可播节目，更新后将自动接上直播");
-    requestAnimationFrame(frame); return;
+    retryButton.hidden = true;
+  } else if (!paused) {
+    warmNext(n);
+    if (on || !warmBlocked) syncAudio(item, t); else positionOnly(item, t);
+    const a = playing?.audio, ms = performance.now();
+    if (a && !blocked && !a.ended) {
+      if (Math.abs(a.currentTime - progressTime) > 0.05) {
+        lastProgress = ms; progressTime = a.currentTime;
+        if (a.readyState >= 3 && !a.paused && !a.seeking) playbackStatus("");
+      }
+      // Do not seek/reload on every frame while a slow download is pending.
+      if (ms - lastProgress > 12000 && ms - lastReload > 12000) recoverAudio();
+    }
   }
-  showStatus();
-  if (!paused) warmNext(n);
-  showAge(item);
-  if (!paused) { if (on || !warmBlocked) syncAudio(item, t); else positionOnly(item, t); }
-  // 暂停时画面定格；时钟仍走服务器时间
-  tv.render(item, t, now(), { mode: "live", upcoming: upcoming(n) });
+  scheduleAudioTick();
+}
+function frame() {
+  const n = vnow(), { item, t } = here(n);
+  if (item) {
+    showAge(item);
+    tv.render(item, t, now(), { mode: "live", upcoming: upcoming(n) });
+  }
   requestAnimationFrame(frame);
 }
+audioTick();
 requestAnimationFrame(frame);
-window.__aitv.player = { switchLog, tapLog, get warmBlocked() { return warmBlocked; }, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
+window.__aitv.player = { switchLog, tapLog, get blocked() { return blocked; }, get message() { return audioMessage; }, get warmBlocked() { return warmBlocked; }, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
   drift() { const a = playing?.audio; if (!a) return null; const { t } = here(); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };
 
 // Keyboard shortcuts never override links, buttons or editable fields.
 document.addEventListener("keydown", (event) => {
   if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.target.closest("a,button,input,textarea,select,[contenteditable],dialog")) return;
-  if (event.code === "Space") { event.preventDefault(); if (!on) { tv.powerOn?.(true); listen(); } else if (paused) resume(); else pause(); }
+  if (event.code === "Space") { event.preventDefault(); if (!on || blocked) { tv.powerOn?.({ instant: true }); listen(); } else if (paused) resume(); else pause(); }
   if (event.key.toLowerCase() === "l") goLive();
 });
 

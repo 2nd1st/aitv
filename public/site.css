@@ -26,3 +26,7 @@ body:has(.tv-chin){display:block;overflow-y:auto}#root:has(.tv-chin){display:blo
 body .tv-picture:not([data-has-img]) .headline,.tv-picture:has(.lower3) .headline{font-size:30px;line-height:1.3;-webkit-line-clamp:4}
 body .tv-picture:not([data-has-img]) .sub .txt,.tv-picture:has(.lower3) .sub .txt{font-size:18px;line-height:1.6}
 }
+
+#player-status.playback-status{inset:auto;left:50%;bottom:62px;transform:translateX(-50%);max-width:calc(100vw - 32px);padding:8px 14px;border-radius:8px;background:rgba(10,10,11,.94);pointer-events:none;font-size:13px;width:max-content}
+#player-retry{position:fixed;z-index:21;left:50%;bottom:106px;transform:translateX(-50%);padding:9px 16px;border:1px solid #666;border-radius:8px;background:#181819;color:#f4f1ea;font:14px system-ui;cursor:pointer}
+#player-retry[hidden]{display:none}
