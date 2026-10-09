@@ -74,7 +74,11 @@ if (cmd === "list") {
   }
   if (live < MIN_PLAYABLE || live < r.playable) { console.log(`线上能播 ${live} 条，不切换`); process.exit(1); }
   const ptr = kvGet("pointer") || {};
-  if (ptr.version === v) { console.log("已经是线上版本"); process.exit(0); }
+  if (ptr.version === v) {
+    // 已经是线上版本：只补记 / 更新提交号，previous 不动
+    kvPutJson("pointer", { ...ptr, commit: guard.commit, commitRecordedAt: new Date().toISOString() });
+    console.log(`已经是线上版本；指针记下提交 ${guard.commit.slice(0, 7)}`); process.exit(0);
+  }
   kvPutJson("pointer", { version: v, previous: ptr.version || null, commit: guard.commit, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString() });
   console.log(`线上指针：${ptr.version} → ${v}（上一版 ${ptr.version} 保留，可回滚）。KV 全球生效约一分钟。`);
 } else if (cmd === "rollback") {
