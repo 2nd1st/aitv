@@ -15,15 +15,17 @@
 
 ### 发布与回滚
 
-- 线上指针是 `public/current.json`：`{ "version": 线上版本, "previous": 上一版 }`。Worker 按它读 `/seeds/<version>/seed.json`，`/api/schedule` 返回 `version`。
-- 切换：`node scripts/release.mjs use <版本号>`。整批校验（每条都有本版本目录里的音频、rounds 标了 what/who/take、有 take / kind / brief、不带原文、Product Hunt 无 rank），**可播少于 15 条就不切**，线上保持旧版。通过后只改指针，旧版本目录原样保留。然后部署：`source /home/box/.cf_aitv.env && npm run build && npx wrangler deploy`。
-- **回滚**（指针切回上一版，再部署）：
+- **音频在 R2**（桶 `aitv-audio`，Worker 绑定 `env.AUDIO`），key 是 `<版本号>/<文件>.mp3`，Worker 在 `/audio/<版本号>/<文件>.mp3` 上直接读 R2：带 `Range` 回 206（`Content-Range`、`Content-Length` 准确），不带回 200；都带 `Accept-Ranges: bytes`、`ETag`、长缓存（`If-None-Match` 命中回 304）。`public/` 里不再放 mp3。
+- **节目单在 KV**（命名空间绑定 `SCHEDULE`）：`seed:<版本号>` 是整份节目单，`pointer` 是 `{ "version": 线上版本, "previous": 上一版 }`。`/api/schedule` 读指针对应的 seed，返回里带 `version`。播放器每分钟查一次，版本变了自动接上，不用刷新。
+- 本地 `releases/<版本号>/seed.json` 进 git；`releases/<版本号>/audio/` 只在本机（.gitignore），线上以 R2 为准。
+- 新版本：`scripts/tts_seed.py items.json <版本号>` 生成到 `releases/<版本号>/` → `node scripts/release.mjs publish <版本号>`（校验后把音频传 R2、seed 写 KV，**不切换**）→ `node scripts/release.mjs use <版本号>`（再校验一遍，并逐条 HEAD 线上 `/audio/…` 确认 200 + audio/mpeg + 长度一致；**可播少于 15 条就不切**；通过后一步改 KV 指针）。不需要重新部署 Worker。
+- **回滚**（KV 指针切回上一版，旧版本的 R2 音频和 KV seed 都还在；不用部署，KV 全球生效约 60 秒）：
   ```sh
-  cd /workspace/aitv && node scripts/release.mjs rollback && source /home/box/.cf_aitv.env && npm run build && npx wrangler deploy
+  cd /workspace/aitv && source /home/box/.cf_aitv.env && node scripts/release.mjs rollback
   ```
-  更快的应急办法（不改仓库，直接回到上一次部署）：`source /home/box/.cf_aitv.env && npx wrangler rollback`。
-- 其他：`node scripts/release.mjs list`（看版本）、`check <版本号>`（只校验）、`prune`（删掉线上和上一版以外的旧版本）。
-- `public/app.js` 播放器：标题/来源点开原文（新标签页）；点画面暂停、再点从暂停处继续；暂停或落后直播时显示「回到直播」，按服务器时钟重新定位；字幕显示正在念的那段。
+  代码出问题（而不是节目单）时回到上一次 Worker 部署：`source /home/box/.cf_aitv.env && npx wrangler rollback`。
+- 其他：`node scripts/release.mjs list`（本地版本 + 线上指针）、`check <版本号>`（只校验本地）。
+- `public/app.js` 播放器：标题/来源点开原文（新标签页）；点画面暂停、再点从暂停处继续；暂停或落后直播时显示「回到直播」，按服务器时钟重新定位；字幕显示正在念的那段。进来/回到直播时等音频 `loadedmetadata`（再在 `canplay` 校一次）按那一刻的服务器时间设 `currentTime`；播放中偏差超过 0.25 秒且缓冲够了才拉回；每分钟重新校时。
 - `screen/`：画面，艾维负责，只暴露 `render(item, t)`。
 - `public/`：静态页。
 
@@ -34,7 +36,7 @@
   "template": "title | number | source",
   "start": 1760000000000,
   "duration": 38.2,
-  "audio": "/audio/hn-41234567.mp3",
+  "audio": "/audio/20261009-1133/hn-41234567.mp3",
   "url": "https://原文链接",
   "source": "Hacker News",
   "fields": { "title": "...", "points": 812, "comments": 233 },

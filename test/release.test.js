@@ -7,7 +7,7 @@ const V = "20261009-1130";
 const good = (i) => ({
   id: `x-${i}`, source: "GitHub Trending", url: "https://github.com/a/b", kind: "project",
   fields: { title: "a / b", what: "w", who: "x" }, brief: { kind: "project", what: "w", who: "x", highlight: "h" },
-  take: "t", script: [{}, {}, {}], audio: `/seeds/${V}/audio/x-${i}.mp3`, duration: 20,
+  take: "t", script: [{}, {}, {}], audio: `/audio/${V}/x-${i}.mp3`, duration: 20,
   rounds: [{ part: "what" }, { part: "who" }, { part: "take" }],
 });
 const bytes = () => 50000;
@@ -38,13 +38,15 @@ test("缺音频、缺 part、带原文、kind 不一致、PH 有 rank，整批�
   for (const k of ["x-0", "x-1", "x-2", "x-3", "x-4", "x-5"]) assert.ok(r.errors.some((e) => e.startsWith(k)), k);
 });
 
-test("/api/schedule 按线上指针读版本，并返回 version", async () => {
-  const seed = { version: V, anchorMs: 0, items: [good(0)] };
-  const files = { "/current.json": { version: V, previous: "20261009-1057" }, [`/seeds/${V}/seed.json`]: seed };
-  const env = { ASSETS: { fetch: async (u) => { const p = new URL(u).pathname; return p in files ? Response.json(files[p]) : new Response("", { status: 404 }); } } };
+test("/api/schedule 按 KV 指针读版本，并返回 version；没有指针返回 503", async () => {
+  const seed = { anchorMs: 0, items: [good(0)] };
+  const kv = { pointer: { version: V, previous: "20261009-1057" }, [`seed:${V}`]: seed };
+  const env = { SCHEDULE: { get: async (k) => kv[k] ?? null } };
   const res = await worker.fetch(new Request("https://aitv.test/api/schedule"), env);
   const body = await res.json();
   assert.equal(body.version, V);
   assert.equal(body.items[0].kind, "project");
-  assert.equal(body.items[0].audio, `/seeds/${V}/audio/x-0.mp3`);
+  assert.equal(body.items[0].audio, `/audio/${V}/x-0.mp3`);
+  const none = await worker.fetch(new Request("https://aitv.test/api/schedule"), { SCHEDULE: { get: async () => null } });
+  assert.equal(none.status, 503);
 });

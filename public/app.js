@@ -24,21 +24,41 @@ function locate(s, nowMs) {
   return { i: 0, t: 0 };
 }
 
-const [clock, schedule] = await Promise.all([
-  syncClock(),
-  fetch("/api/schedule", { cache: "no-store" }).then((r) => r.json()),
-]);
+async function loadSchedule() {
+  for (let k = 0; ; k++) {
+    try {
+      const r = await fetch("/api/schedule", { cache: "no-store" });
+      if (r.ok) return await r.json();
+    } catch {}
+    await new Promise((ok) => setTimeout(ok, Math.min(30000, 2000 * 2 ** k)));
+  }
+}
+let [clock, schedule] = await Promise.all([syncClock(), loadSchedule()]);
 const now = () => performance.timeOrigin + performance.now() + clock.offset;
-window.__aitv = { clock, schedule, now, locate: () => locate(schedule, now()) };
+window.__aitv = { get clock() { return clock; }, get schedule() { return schedule; }, now, locate: () => locate(schedule, now()) };
 
-// 预取：当前和下一条的音频
+// 每分钟重新校时；顺便看节目单版本，换版了就接上新版（指针切换 / 回滚不用刷新页面）
+setInterval(async () => {
+  try { const c = await syncClock(); if (c.rtt < 1500) clock = c; } catch {}
+  try {
+    const r = await fetch("/api/schedule", { cache: "no-store" });
+    if (r.ok) { const s = await r.json(); if (s.version && s.version !== schedule.version) schedule = s; }
+  } catch {}
+}, 60000);
+
+let on = false, playing = null; // playing: { id, audio }
+
+// 预取：当前和下一条的音频。按音频地址缓存（不同版本同 id 不会串）
 const cache = new Map();
 function audioFor(item) {
-  if (!cache.has(item.id)) {
-    const a = new Audio(item.audio); a.preload = "auto"; cache.set(item.id, a);
-    if (cache.size > 4) cache.delete(cache.keys().next().value);
+  if (!cache.has(item.audio)) {
+    const a = new Audio(item.audio); a.preload = "auto"; cache.set(item.audio, a);
+    if (cache.size > 4) {
+      const [k, old] = cache.entries().next().value;
+      if (old !== playing?.audio) cache.delete(k);
+    }
   }
-  return cache.get(item.id);
+  return cache.get(item.audio);
 }
 function prefetchAround(i) {
   const n = schedule.items.length;
@@ -46,29 +66,53 @@ function prefetchAround(i) {
 }
 prefetchAround(locate(schedule, now()).i);
 
-let on = false, playing = null; // playing: { id, audio }
 // 本地时间线：直播位置 = 服务器时间；暂停后继续会落后直播 lag 毫秒，「回到直播」清零。
 let paused = false, frozenAt = 0, lag = 0;
 const vnow = () => (paused ? frozenAt : now() - lag);
+// 这条音频此刻应该在第几秒（按服务器时钟现算；不在这条上了返回 null）
+function targetT(audio) {
+  const { i, t } = locate(schedule, vnow());
+  return schedule.items[i].audio === audio ? t : null;
+}
 
+// 定位：元数据没到之前设 currentTime 会被浏览器忽略（iOS 尤甚）。
+// 所以等 loadedmetadata 再按「那一刻」的服务器时间算位置；canplay 时再校一次。
+function seekWhenReady(a, url) {
+  const apply = () => {
+    if (playing?.audio !== a || paused) return;
+    const t = targetT(url);
+    if (t != null && Math.abs(a.currentTime - t) > 0.25) a.currentTime = Math.min(Math.max(0, t), (a.duration || Infinity) - 0.05);
+  };
+  if (a.readyState >= 1) apply();
+  else a.addEventListener("loadedmetadata", apply, { once: true });
+  if (a.readyState < 3) a.addEventListener("canplay", apply, { once: true });
+}
+
+let lastFix = 0;
 function syncAudio(item, t) {
   const a = audioFor(item);
-  if (!playing || playing.id !== item.id) {
+  if (!playing || playing.audio !== a) {
     if (playing) playing.audio.pause();
     playing = { id: item.id, audio: a };
-    a.currentTime = Math.max(0, t);
-    a.play().catch(() => {});
+    if (a.readyState >= 1) a.currentTime = Math.max(0, t);
+    a.play().catch(() => {});      // 开机那次点击里同步调用，保住手势
+    seekWhenReady(a, item.audio);
     prefetchAround(schedule.items.indexOf(item));
     return;
   }
   // 暂停后继续：从时间线上的位置接着放
   if (a.paused && !a.ended && !(t >= (a.duration || Infinity) - 0.05)) {
-    a.currentTime = Math.max(0, t);
+    if (a.readyState >= 1) a.currentTime = Math.max(0, t);
     a.play().catch(() => {});
+    seekWhenReady(a, item.audio);
     return;
   }
-  // 漂移超过 0.25 秒就拉回来
-  if (!a.paused && Math.abs(a.currentTime - t) > 0.25 && t < a.duration) a.currentTime = t;
+  // 漂移超过 0.25 秒就拉回来：只在缓冲够了、没在 seek 的时候，且最多每秒一次，避免来回拉扯
+  const ms = performance.now();
+  if (!a.paused && !a.seeking && a.readyState >= 3 && ms - lastFix > 1000 &&
+      Math.abs(a.currentTime - t) > 0.25 && t < a.duration - 0.05) {
+    a.currentTime = t; lastFix = ms;
+  }
 }
 
 function pause() {
@@ -124,4 +168,5 @@ function frame() {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__aitv.player = { pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; } };
+window.__aitv.player = { pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
+  drift() { const a = playing?.audio; if (!a) return null; const { t } = locate(schedule, vnow()); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };

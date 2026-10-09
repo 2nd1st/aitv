@@ -4,3 +4,4 @@ node_modules/
 *.log
 .venv/
 public/screen/
+releases/*/audio/

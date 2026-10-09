@@ -72,7 +72,8 @@ test("原文不进 seed 也不进节目单：只留 brief + url", async () => {
   assert.equal(s.items[0].url, item.url);
   assert.deepEqual(s.items[0].brief, item.brief);
   // Worker 接口同样干净（KV 里万一存了原文也剥掉）
-  const env = { SCHEDULE: { get: async () => JSON.stringify(s.items.length && { anchor: 0, total: 10000, items: [{ ...item, audio: "/a.mp3", duration: 10, start: 0 }] }) } };
+  const kv = { pointer: { version: "20261009-1200" }, "seed:20261009-1200": { anchor: 0, total: 10000, items: [{ ...item, audio: "/a.mp3", duration: 10, start: 0 }] } };
+  const env = { SCHEDULE: { get: async (k) => kv[k] ?? null } };
   const res = await worker.fetch(new Request("https://aitv.test/api/schedule"), env);
   const body = await res.text();
   assert.ok(!body.includes("PAGE_RAW_TEXT") && body.includes("brief"));

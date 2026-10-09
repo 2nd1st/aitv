@@ -25,7 +25,7 @@ const decode = (s) =>
     .replace(/\s+/g, " ")
     .trim();
 
-function item({ id, source, url, fetchedAt, publishedAt = null, focus = null, fields }) {
+function item({ id, source, url, fetchedAt, publishedAt = null, focus = null, fields, storyId }) {
   // 去掉空字段，免得校验时混进 "null"
   const clean = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null && v !== undefined && v !== ""));
   const hasFocus = focus && typeof clean[focus] === "number";
@@ -33,6 +33,7 @@ function item({ id, source, url, fetchedAt, publishedAt = null, focus = null, fi
     id, source, url, fetchedAt, publishedAt,
     template: hasFocus ? "number" : "title",
     ...(hasFocus ? { focus } : {}),
+    ...(storyId ? { storyId } : {}),
     fields: clean,
   };
 }
@@ -109,6 +110,8 @@ export function parseAIHOT(json, fetchedAt) {
   return (json.items || []).map((x) => {
     const links = x.links || {};
     const permalink = links.aihot || x.permalink;
+    // links.story 是给人看的页面；按文档只取最后一段当 publicId，再调 /api/v1/stories/{publicId}
+    const storyId = links.story ? links.story.split("/").filter(Boolean).pop() : null;
     return item({
       id: `aihot-${x.id}`,
       source: "AIHOT",
@@ -123,6 +126,7 @@ export function parseAIHOT(json, fetchedAt) {
         rank: x.rank,
         permalink,
       },
+      ...(storyId ? { storyId } : {}),
     });
   });
 }
@@ -135,6 +139,33 @@ export const SOURCES = {
   producthunt: { url: "https://www.producthunt.com/feed", kind: "text", parse: parseProductHunt },
   aihot: { url: "https://aihot.news/api/v1/hot-topics", kind: "json", parse: parseAIHOT },
 };
+
+// AIHOT 的 links.original 是这条事件最早那篇报道（比如 9/28 的 Sonnet 5.5 发布页），
+// 事件后来有了新进展（10/7 Haiku 5.5 发布 + Sonnet 5.5 缓存降价）时会链错。
+// 修法：读事件时间线，在跟 links.original 同一个站点的一手报道（firstParty）里取最新的一篇。
+export function pickStoryUrl(original, story) {
+  let host;
+  try { host = new URL(original).hostname; } catch { return original; }
+  const firsts = (story?.reports || [])
+    .filter((r) => r.source?.firstParty && r.links?.original)
+    .filter((r) => { try { return new URL(r.links.original).hostname === host; } catch { return false; } })
+    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+  return firsts[0]?.links.original || original;
+}
+export async function refineAIHOTUrls(items, { fetchImpl = fetch, timeoutMs = 15000 } = {}) {
+  return Promise.all(items.map(async (it) => {
+    if (it.source !== "AIHOT" || !it.storyId) return it;
+    const { storyId, ...rest } = it;
+    try {
+      const res = await fetchImpl(`https://aihot.news/api/v1/stories/${encodeURIComponent(storyId)}`, {
+        headers: { "user-agent": UA, accept: "application/json" }, signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) return rest;
+      const url = pickStoryUrl(it.url, (await res.json()).story);
+      return url === it.url ? rest : { ...rest, url, originalUrl: it.url };
+    } catch { return rest; }
+  }));
+}
 
 // 一个源挂了不影响别的源；errors 里记下来，节目单照常出。
 export async function fetchAll({ fetchImpl = fetch, now = Date.now(), timeoutMs = 15000, only } = {}) {
@@ -150,8 +181,9 @@ export async function fetchAll({ fetchImpl = fetch, now = Date.now(), timeoutMs 
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = s.kind === "json" ? await res.json() : await res.text();
-        const items = s.parse(body, now);
+        let items = s.parse(body, now);
         if (!items.length) throw new Error("解析出 0 条，页面结构可能变了");
+        if (name === "aihot") items = await refineAIHOTUrls(items, { fetchImpl, timeoutMs });
         return items;
       } catch (e) {
         errors[name] = String(e.message || e);

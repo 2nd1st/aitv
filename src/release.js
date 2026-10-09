@@ -1,6 +1,7 @@
 // 版本化发布（架构师的发布纪律）：
-// - 每批节目单独成一个版本：public/seeds/<version>/seed.json + public/seeds/<version>/audio/*.mp3
-// - 线上指针 public/current.json = { version, previous }；切换只改这一个文件（再部署），上一版原样保留，随时回滚。
+// - 每批节目单独成一个版本：本地 releases/<version>/seed.json + audio/*.mp3；
+//   上线后音频在 R2 的 <version>/<file>.mp3（对外 /audio/<version>/<file>.mp3，支持 Range），seed 在 KV 的 seed:<version>。
+// - 线上指针是 KV 的 pointer = { version, previous }；切换 / 回滚只改这一个 key，上一版原样保留。
 // - 新版本必须整批校验通过、且可播条目 >= MIN_PLAYABLE 才允许切过去；不够就保留旧版。
 import { KINDS } from "./enrich.js";
 
@@ -24,7 +25,7 @@ export function checkSeed(seed, version, { audioBytes, minPlayable = MIN_PLAYABL
   for (const it of seed.items) {
     const e = [];
     const dump = JSON.stringify(it);
-    const hasAudio = !!it.audio && it.audio.startsWith(`/seeds/${version}/audio/`) && audioBytes(it.audio) > 1000 && it.duration > 0;
+    const hasAudio = !!it.audio && it.audio.startsWith(`/audio/${version}/`) && audioBytes(it.audio) > 1000 && it.duration > 0;
     if (hasAudio) audioOk++;
     else e.push("音频缺失、不在本版本目录或没有时长");
     if (!KINDS.includes(it.kind) || it.brief?.kind !== it.kind) e.push("kind 缺失或跟 brief 不一致");

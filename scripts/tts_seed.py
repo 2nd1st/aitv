@@ -1,6 +1,6 @@
 """把 build-items 的输出逐条合成豆包语音，写成一个独立版本：
-  public/seeds/<version>/audio/*.mp3 + public/seeds/<version>/seed.json（带 version）。
-不碰线上版本；切换用 scripts/release.mjs use <version>（校验通过、可播 >= 15 条才切）。
+  releases/<version>/audio/*.mp3 + releases/<version>/seed.json（带 version；音频地址 /audio/<version>/<file>.mp3）。
+不碰线上版本；上线：scripts/release.mjs publish <version>（传 R2 + KV），再 use <version>（校验、可播 >= 15 条才切指针）。
 用法：node scripts/build-items.mjs 20 > /tmp/items.json && /workspace/podcast/.venv/bin/python scripts/tts_seed.py /tmp/items.json [version]
 version 不给就用东八区当前时间，如 20261009-1130。
 进 seed 的字段走白名单（SEED_KEYS），原文（materialText 等）一律不写进去。
@@ -14,7 +14,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import datetime
 VERSION = sys.argv[2] if len(sys.argv) > 2 else datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y%m%d-%H%M")
 assert re.fullmatch(r"\d{8}-\d{4,6}", VERSION), VERSION
-OUT = os.path.join(ROOT, "public", "seeds", VERSION)
+OUT = os.path.join(ROOT, "releases", VERSION)
 AUDIO = os.path.join(OUT, "audio")
 ANCHOR_MS = 1760000000000  # 固定锚点：所有设备按同一个时钟算位置
 
@@ -64,7 +64,7 @@ async def main(src):
         d = duration(path)
         if d <= 0: print("跳过（无音频）", it["id"]); continue
         it2 = {k: it[k] for k in SEED_KEYS if k in it}
-        it2.update(audio=f"/seeds/{VERSION}/audio/{name}", duration=round(d + 0.6, 3), spoken="".join(it["lines"]),
+        it2.update(audio=f"/audio/{VERSION}/{name}", duration=round(d + 0.6, 3), spoken="".join(it["lines"]),
                    rounds=tag_parts([{"text": r["text"], "start_time": r["start_time"], "end_time": r["end_time"]} for r in rounds], it["lines"]))
         out.append(it2)
         print(f"{i+1}/{len(items)}", it["id"], round(d, 1), "秒")

@@ -6,15 +6,17 @@ routes = [{ pattern = "aitv.qiaomu.ai", custom_domain = true }]
 [assets]
 directory = "public"
 binding = "ASSETS"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/audio/*"]
 
-# 上线时启用：KV 存节目单，R2 存语音，每 15 分钟跑一次流水线
-# [[kv_namespaces]]
-# binding = "SCHEDULE"
-# id = "<待创建>"
-# [[r2_buckets]]
-# binding = "AUDIO"
-# bucket_name = "aitv-audio"
+# 节目单指针和各版本 seed 放 KV；音频放 R2（支持 Range）
+[[kv_namespaces]]
+binding = "SCHEDULE"
+id = "35456d05bca74c6390acb8af52f0ef89"
+
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "aitv-audio"
+
+# 以后：每 15 分钟跑一次流水线
 # [triggers]
 # crons = ["*/15 * * * *"]
-
