@@ -6,10 +6,11 @@ import { parseGitHubTrending, parseAIHOT } from "../src/sources.js";
 
 const fx = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), "utf8");
 const T = 1760000000000;
-const [gh] = parseGitHubTrending(fx("gh-trending.html"), T);
+// 第一条是 AnyPS5（内容安全会拦），这里用第二条
+const [, gh] = parseGitHubTrending(fx("gh-trending.html"), T);
 const fakeFetch = async (url) => (url.includes("raw.githubusercontent") ? new Response(fx("readme.md")) : new Response("", { status: 404 }));
 const llmSays = (obj) => async () => JSON.stringify(obj);
-const good = { kind: "project", what: "一个把游戏主机程序移植到电脑上的工具", who: "想在电脑上跑主机游戏的开发者", highlight: "不靠模拟器，直接转成本机格式" };
+const good = { kind: "project", what: "一个给编程助手用的画图技能", who: "常写技术文档的开发者", highlight: "图表风格能跟网站统一" };
 
 test("正常的一句话点评能通过：白名单词不算数字", () => {
   assert.equal(hasNumber("一句话点评：这是一个十分好用的工具，唯一缺点是文档少"), false);

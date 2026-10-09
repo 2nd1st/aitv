@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkSeed, MIN_PLAYABLE } from "../src/release.js";
+import { gitGuard } from "./guard.mjs";
 
 const ROOT = new URL("../releases/", import.meta.url);
 const BASE = process.env.AITV_BASE || "https://aitv.qiaomu.ai";
@@ -34,6 +35,8 @@ function report(v, r) {
 }
 
 const [cmd, v] = process.argv.slice(2);
+// publish / use 会改线上：只允许从干净的 main（HEAD == origin/main）发。rollback 只把指针换回上一版，应急用，不设闸。
+const guard = cmd === "publish" || cmd === "use" ? gitGuard() : null;
 if (cmd === "list") {
   const ptr = kvGet("pointer") || {};
   for (const d of readdirSync(ROOT).filter((d) => existsSync(seedPath(d))).sort())
@@ -72,12 +75,12 @@ if (cmd === "list") {
   if (live < MIN_PLAYABLE || live < r.playable) { console.log(`线上能播 ${live} 条，不切换`); process.exit(1); }
   const ptr = kvGet("pointer") || {};
   if (ptr.version === v) { console.log("已经是线上版本"); process.exit(0); }
-  kvPutJson("pointer", { version: v, previous: ptr.version || null, switchedAt: new Date().toISOString() });
+  kvPutJson("pointer", { version: v, previous: ptr.version || null, commit: guard.commit, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString() });
   console.log(`线上指针：${ptr.version} → ${v}（上一版 ${ptr.version} 保留，可回滚）。KV 全球生效约一分钟。`);
 } else if (cmd === "rollback") {
   const ptr = kvGet("pointer") || {};
   if (!ptr.previous || !kvGet(`seed:${ptr.previous}`)) { console.log("没有可回滚的上一版"); process.exit(1); }
-  kvPutJson("pointer", { version: ptr.previous, previous: ptr.version, switchedAt: new Date().toISOString() });
+  kvPutJson("pointer", { version: ptr.previous, previous: ptr.version, commit: ptr.previousCommit || null, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString(), rolledBack: true });
   console.log(`已回滚：${ptr.version} → ${ptr.previous}。KV 全球生效约一分钟，不用重新部署。`);
 } else {
   console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback"); process.exit(2);

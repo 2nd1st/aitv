@@ -16,6 +16,7 @@ const MAX_CHARS = 6000;
 // 数字规则和白名单只在 digits.js 一处定义，validate.js 共用。
 import { hasNumber, WORD_WHITELIST } from "./digits.js";
 import { toneViolations, overclaimViolations } from "./tone.js";
+import { checkSafety } from "./safety.js";
 export { hasNumber, WORD_WHITELIST };
 
 const decode = (s) =>
@@ -112,8 +113,15 @@ ${material.text}
 </素材>
 
 只根据素材，输出 JSON，不要别的文字：
-{"kind":"product|project|commentary|news","name":"…","what":"…","who":"…","highlight":"…","limit":"…"}
+{"safety":"ok|unsafe","safetyReason":"…","kind":"product|project|commentary|news","name":"…","what":"…","who":"…","highlight":"…","limit":"…"}
 
+safety：先判断这条的主要用途。属于下面任何一种就写 "unsafe"，并在 safetyReason 里用一句话说明；否则写 "ok"、safetyReason 写空串：
+- 盗版、免费获取付费内容；
+- 在原平台以外运行主机 / 游戏的可执行文件或 ROM（移植、模拟、解密主机游戏等）；
+- 绕过 DRM、反作弊、付费墙、授权校验；
+- 破解软件、注册机；
+- 克隆 / 仿冒别人的产品。
+只是报道或评论这类事件（比如新闻讲某公司打击盗版）不算，写 "ok"。
 kind（只能四选一，按这篇东西本身是什么来判断）：
 - product：一个能用的产品、应用、服务、模型（发布页、产品页、上线公告）。
 - project：一个开源项目、代码仓库、工具库。
@@ -130,7 +138,8 @@ limit：素材里写到的关键限制或前提——适用范围、还没做到
 - what / who / highlight / limit 每项不超过四十个字，口语化，能直接念出来，中性、专业。
 - 不写鼓励抄袭、照搬别人功能、盗版、破解、绕过限制的说法（比如「想抄别人功能」「拿不到源码」）。
 - what / who / highlight / limit 里一律不写数字，包括阿拉伯数字和中文数字、倍数（如“十倍”“三成”“两个”“新一代”“第一”“一键”），也不写版本号和带数字的产品名（用“它”或去掉数字的叫法；名字放进 name）。要表达程度就用“更快”“大幅”这类词。
-- 注意下面这些常见说法也含数字，不许用：一套、一位、一群、一堆、一眼、一时、一次、一点、一键、一开口、一代、第一、两者、三维、十足、半天、百科、千万、一致、一类、一部分、一篇、一张、一条、陆续、大陆、万物。改成「整套」「有位」「不少」「马上」「立体」等说法。只有这些词可以带「一」或「十」：一个、一款、一种、一句话、一下、一起、一些、一直、一样、唯一、统一、万一、十分。
+- 注意下面这些常见说法也含数字，不许用：一套、一位、一群、一堆、一眼、一时、一次、一点、一键、一开口、一代、第一、两者、三维、十足、半天、百科、千万、一类、一部分、一篇、一张、一条、万物、第一次。改成「整套」「有位」「不少」「马上」「立体」等说法。只有这些词可以带「一」或「十」：一个、一款、一种、一句话、一下、一起、一些、一直、一样、唯一、统一、万一、十分、同一、一致。
+- 不写「第一次」「首次」「首个」「唯一一个」「率先」「最早」这类先后 / 独家说法，除非素材原文明确这么说；否则换成不带先后的说法（比如「新规里明确禁止……」）。
 - 不夸大：只写素材里有依据的事，程度和范围都照素材来。比如素材说「局域网里有异常流量」就不能写成「偷偷往外发数据」；实验性 / 早期项目不能写成能替代成熟产品；作者的说法要说成作者的说法。不用「偷偷」「颠覆」「碾压」「完美」「最强」「史上」「神器」这类词。
 - 素材里没有的信息不要补，不确定就写得保守一些。`;
 }
@@ -192,6 +201,9 @@ export function parseBrief(text) {
 }
 
 export async function enrich(item, { llm, fetchImpl = fetch, retries = 0 } = {}) {
+  // 内容安全先用标题和源站简介过一遍关键词：命中就不读原文、不调模型
+  const pre = checkSafety(item);
+  if (!pre.ok) return { ...item, image: null, brief: null, briefError: `内容安全：${pre.reasons.join("；")}`, unsafe: true };
   const material = await fetchMaterial(item, { fetchImpl });
   if (!material) return { ...item, image: null, brief: null, briefError: "原文读不到" };
   // 原文只在这个函数里用来提炼，不挂到 item 上，不进 seed / 节目单
@@ -205,6 +217,11 @@ export async function enrich(item, { llm, fetchImpl = fetch, retries = 0 } = {})
     if (chk.ok) break;
   }
   // 只有 name 不合格：去掉 name 照用，稿子里就不能用 {{name}}
+  // 内容安全：模型标记 unsafe 或关键词兜底命中，整条丢掉（不重试，不进写稿）
+  if (b && typeof b === "object") {
+    const safe = checkSafety(item, b);
+    if (!safe.ok) return { ...item, image: material.image ?? null, brief: null, briefError: `内容安全：${safe.reasons.join("；")}`, unsafe: true };
+  }
   // 只有 name / limit 不合格：去掉它们照用（没有 name 稿子里就不能用 {{name}}）
   if (!chk.ok && chk.softOnly) { b = { ...b, ...(chk.nameBad ? { name: null } : {}), ...(chk.limitBad ? { limit: "" } : {}) }; chk = { ok: true, errors: [] }; }
   if (!chk.ok) return { ...item, image: material.image ?? null, brief: null, briefError: chk.errors.join("；") };

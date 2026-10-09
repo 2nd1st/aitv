@@ -13,6 +13,17 @@
 - `src/validate.js` 的 `UNITS`：每个能进稿的数字字段都注明它在源接口里是什么数；含义没核实的不留（HN / Product Hunt 不给 rank，AIHOT 的 sourceCount / signalCount 没文档，不用）。
 - 生成节目（新版本，不影响线上）：`node scripts/build-items.mjs 20 > /tmp/items.json && /workspace/podcast/.venv/bin/python scripts/tts_seed.py /tmp/items.json [版本号]` → `public/seeds/<版本号>/seed.json` + `audio/`（需要 `DEEPSEEK_API_KEY`、`DOUBAO_TTS_ACCESS_TOKEN`；写稿模型默认 `deepseek-v4-pro`，补料默认 `deepseek-chat`，可用 `AITV_SCRIPT_MODEL` / `AITV_BRIEF_MODEL` 改）。版本号是东八区时间，如 `20261009-1130`。
 
+### 部署（唯一入口）
+
+```sh
+cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
+```
+`scripts/deploy.mjs` 先过闸门（`scripts/guard.mjs`）：当前分支必须是 `main`、工作区干净（含未跟踪文件）、`git fetch` 后 `HEAD == origin/main`，否则拒绝。通过后构建并 `wrangler deploy --define BUILD_COMMIT:"<sha>"`，`/api/schedule` 返回的 `commit` 就是线上 Worker 的提交。`release.mjs publish / use` 走同一个闸门，`use` 把当前提交记进 KV 指针（`/api/schedule` 的 `releaseCommit`）；`rollback` 只换指针、应急用，不设闸。不要直接 `npx wrangler deploy`，也不要在共享的 `/workspace/aitv`（设计师在那里切分支）部署。
+
+### 内容规则（补料这一步）
+- 内容安全（`src/safety.js`）：主要用途是盗版、在原平台以外运行主机 / 游戏可执行文件或 ROM、绕过 DRM / 反作弊 / 付费墙、破解、克隆别人产品的条目，在补料时整条丢掉。模型在 brief 里给 `safety: ok|unsafe`，再加标题 / 源站简介 / brief 文本的关键词兜底；标题和简介命中的连原文都不读。
+- 数字规则（`src/digits.js`）：白名单收词标准——一个词里的数字既不表示数量、也不表示名次或先后时才能收（`同一`、`一致` 可以；`第一次` 不行，提示词要求换成不带先后的说法，除非原文明说）。大写数字不查。
+
 ### 发布与回滚
 
 - **音频在 R2**（桶 `aitv-audio`，Worker 绑定 `env.AUDIO`），**按内容寻址**：key 是 `<hash>.mp3`，hash = sha256(两个音色 + 合成参数 + 三段口播稿) 的前 16 位，旁边 `<hash>.json` 存分句时间轴（不对外）。同一份稿子不重复合成（`tts_seed.py` 先看本地 `audio-cache/`，再看 R2，有就跳过 TTS），跨版本共用，定时任务重跑也不重复花钱。最早两个版本（20261009-1057 / 1133）用的是 `<版本号>/<文件>.mp3`，Worker 照样认。Worker 在 `/audio/<hash>.mp3` 上直接读 R2：带 `Range` 回 206（`Content-Range`、`Content-Length` 准确），不带回 200；都带 `Accept-Ranges: bytes`、`ETag`、长缓存（`If-None-Match` 命中回 304）。`public/` 里不再放 mp3。

@@ -47,3 +47,10 @@ test("what / who / highlight 是文本字段，可以原样插入", () => {
   const f = { what: "一个画图技能", who: "开发者", highlight: "风格统一" };
   assert.equal(buildSpoken("{{what}}，给{{who}}用，{{highlight}}。", f), "一个画图技能，给开发者用，风格统一。");
 });
+
+import { hasNumber as hasNum, WORD_WHITELIST as WL } from "../src/digits.js";
+test("数字规则（架构师）：同一 / 一致 进白名单；大写数字不查；第一次仍拦", () => {
+  assert.ok(WL.includes("同一") && WL.includes("一致"));
+  for (const s of ["新内容会陆续补充", "大陆用户也能用", "同一套引擎", "口径不一致", "风格保持一致"]) assert.equal(hasNum(s), false, s);
+  for (const s of ["第一次禁止虐待模型", "第一", "首发两款", "三倍速度", "一次"]) assert.equal(hasNum(s), true, s);
+});
