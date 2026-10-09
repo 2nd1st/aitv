@@ -107,3 +107,12 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
 npm test
 npm run dev
 ```
+
+### 首屏与移动端（2026-10-09）
+
+- 校时并行采样并容忍部分失败；时间接口与节目单请求有超时和重试，首屏立即显示连接状态。
+- 播放器使用 `/api/schedule?compact=1`，只返回 current/next 与播放需要的数据；旧接口保留兼容字段。空节目单显示等待提示，下一次刷新自动恢复。
+- 回到前台或恢复网络时立即刷新节目单与校时；空格收听/暂停/继续，L 回到直播（链接、按钮和输入区域保留原生键盘行为）。
+- 竖屏下保留电视风格，正文可滚动、字号固定；默认与 `?ui=v4` 都保留。时钟按北京时间显示。
+- SEO 分享卡、站点地图、安装图标与离线说明已提供。Service Worker 只缓存离线说明，直播接口、音频与播放器代码始终走网络，避免旧节目单缓存。
+- 本机也可用 Wrangler OAuth 部署：`env -u CLOUDFLARE_API_TOKEN -u CF_API_TOKEN npm run deploy`。部署入口仍检查干净 main 与 origin/main 一致；勿直接部署工作分支。

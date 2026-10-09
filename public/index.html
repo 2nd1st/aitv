@@ -2,12 +2,40 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI 今天 · AITV</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0b">
+<meta name="description" content="AI 今天是一座持续更新的 AI 新闻台，收听 AI 新闻、产品和开源项目，跟随同步字幕，随时查看原文。">
+<link rel="canonical" href="https://aitv.qiaomu.ai/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AI 今天 · AITV">
+<meta property="og:description" content="打开就是 AI 今天：新闻、产品、开源项目，持续更新的 AI 新闻台。">
+<meta property="og:url" content="https://aitv.qiaomu.ai/">
+<meta property="og:image" content="https://aitv.qiaomu.ai/share.png">
+<meta name="twitter:card" content="summary_large_image">
+<title>AI 今天 · AITV — 持续更新的 AI 新闻台</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/screen/tv.css">
+<link rel="stylesheet" href="/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"AI 今天 · AITV","url":"https://aitv.qiaomu.ai/","description":"持续更新的 AI 新闻、产品和开源项目直播新闻台","inLanguage":"zh-CN"}</script>
 </head>
 <body>
-<div id="root"></div>
+<div id="player-status" role="status">正在连接直播…</div>
+<main id="root" aria-label="AI 今天直播播放器"></main>
+<footer class="site-footer">
+  <span class="site-intro">AI 今天<span> · 空格暂停 / 继续 · L 回到直播</span></span>
+  <nav aria-label="关于 AI 今天">
+    <button type="button" data-modal="follow" aria-label="关注" title="关注"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L2 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></button>
+    <button type="button" data-modal="reward" aria-label="打赏" title="打赏"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg></button>
+    <a href="https://github.com/joeseesun/aitv" target="_blank" rel="noopener" aria-label="GitHub 项目" title="GitHub 项目"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.3-4.3-2.2-6-2.7M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.2-1.5 6.2-7A5.5 5.5 0 0 0 19 4.7 5.1 5.1 0 0 0 18.9 1S17.7.7 15 2.5a13.4 13.4 0 0 0-7 0C5.3.7 4.1 1 4.1 1A5.1 5.1 0 0 0 4 4.7a5.5 5.5 0 0 0-1.3 3.8c0 5.4 3.2 6.6 6.2 7a3.4 3.4 0 0 0-.9 2.6V22"/></svg></a>
+    <a href="https://x.com/vista8" target="_blank" rel="noopener" aria-label="X" title="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 3 16 18M20 3 4 21"/></svg></a>
+    <a href="https://tuijian.qiaomu.ai/" target="_blank" rel="noopener">乔木推荐</a>
+  </nav>
+</footer>
+<dialog id="site-dialog" aria-labelledby="dialog-title"><button class="dialog-close" aria-label="关闭" title="关闭">×</button><h2 id="dialog-title"></h2><img id="dialog-qr" alt=""><p id="dialog-note"></p></dialog>
+<noscript>请启用 JavaScript 收听直播。AI 今天持续整理 AI 新闻、产品与开源项目，提供同步字幕和原文链接。</noscript>
+<script type="module" src="/site.js"></script>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

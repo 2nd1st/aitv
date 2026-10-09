@@ -1,0 +1,28 @@
+#root{width:100%;display:grid;place-items:center}
+.tv:has(.tv-chin){width:min(94vw,calc((100svh - 90px)*16/10.2))}
+#player-status{position:fixed;inset:0;z-index:20;display:grid;place-content:center;background:#0a0a0b;color:#f4f1ea;font:15px/1.6 system-ui;text-align:center;padding:24px}
+#player-status[hidden]{display:none}
+.site-footer{position:fixed;bottom:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px max(20px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom));background:#0a0a0b;color:#aaa;font:12px/1.5 system-ui}
+.site-footer nav{display:flex;align-items:center;gap:4px}.site-footer a{color:inherit;text-decoration:none;padding:8px}.site-footer button{display:grid;place-items:center;background:none;border:0;color:inherit;width:36px;height:36px;cursor:pointer}.site-footer svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.site-footer a:hover,.site-footer button:hover{color:#ffb547}.site-footer button:active{transform:scale(.96)}
+a:focus-visible,button:focus-visible{outline:1px solid #aaa;outline-offset:3px}
+#site-dialog{width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:28px;border:1px solid #333;border-radius:14px;background:#181819;color:#f4f1ea;font:14px/1.6 system-ui;text-align:center}#site-dialog::backdrop{background:rgb(0 0 0 / .75)}#site-dialog h2{font-size:20px;margin:8px 0 18px}#dialog-qr{display:block;max-width:100%;max-height:55dvh;object-fit:contain;margin:auto}#dialog-note{margin:16px 0 0}.dialog-close{position:absolute;right:8px;top:8px;border:0;background:none;color:inherit;font-size:26px;width:36px;height:36px;cursor:pointer}
+/* Reserve room for the site controls in either screen style. */
+body:has(.tv-screen .lower3) .tv{bottom:52px}
+@media(max-width:600px){.site-intro{display:none}.site-footer{justify-content:center;padding-left:8px;padding-right:8px}}
+@media(max-width:600px) and (orientation:portrait){
+body:has(.tv-chin){display:block;overflow-y:auto}#root:has(.tv-chin){display:block;padding:20px 12px 80px}
+.tv:has(.tv-chin){width:100%;aspect-ratio:auto;min-height:calc(100svh - 120px);padding:10px 10px 30px;border-radius:16px}
+.tv:has(.tv-chin) .tv-screen{aspect-ratio:auto;min-height:calc(100svh - 165px)}
+.tv:has(.tv-chin) .tv-picture{font-size:8px}
+.tv:has(.tv-chin) .bug{left:16px;top:20px}.tv:has(.tv-chin) .logo{font-size:14px}.tv:has(.tv-chin) .state{font-size:12px}
+.tv:has(.tv-chin) .clockbox{right:16px;top:20px}.tv:has(.tv-chin) .clockbox b{font-size:19px}.tv:has(.tv-chin) .clockbox small{font-size:9px}
+.tv:has(.tv-chin) .card{left:16px;right:16px;top:80px;bottom:100px;overflow-y:auto;justify-content:flex-start}
+.tv:has(.tv-chin) .kicker{flex-wrap:wrap;font-size:12px;gap:8px}.tv:has(.tv-chin) .headline{font-size:26px;line-height:1.3;overflow-wrap:anywhere}.tv:has(.tv-chin) .headline .orig{font-size:12px;line-height:1.5}
+.tv:has(.tv-chin) .parts{display:block;font-size:15px;margin:20px 0 0}.tv:has(.tv-chin) .part{display:block;margin-bottom:16px}.tv:has(.tv-chin) .part dt{font-size:11px;margin-bottom:5px}.tv:has(.tv-chin) .part dd{line-height:1.6}
+.tv:has(.tv-chin) .band{height:46px}.tv:has(.tv-chin) .tag{padding:0 12px;font-size:12px}.tv:has(.tv-chin) .track{font-size:12px}.tv:has(.tv-chin) .golive{bottom:58px;right:16px;font-size:12px}
+}
+@media(max-width:600px) and (orientation:portrait){
+.tv-picture:has(.lower3) .meta{flex-wrap:wrap;gap:8px;font-size:12px}.tv-picture:has(.lower3) .meta span{white-space:nowrap}
+body .tv-picture:not([data-has-img]) .headline,.tv-picture:has(.lower3) .headline{font-size:30px;line-height:1.3;-webkit-line-clamp:4}
+body .tv-picture:not([data-has-img]) .sub .txt,.tv-picture:has(.lower3) .sub .txt{font-size:18px;line-height:1.6}
+}
