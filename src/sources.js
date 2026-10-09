@@ -295,18 +295,39 @@ export async function refineAIHOTUrls(items, { fetchImpl = fetch, timeoutMs = 15
 }
 
 // 一个源挂了不影响别的源；errors 里记下来，节目单照常出。
-export async function fetchAll({ fetchImpl = fetch, now = Date.now(), timeoutMs = 15000, only } = {}) {
+// GitHub Trending 等页面偶尔回 504 或超时（实测约两成），这类临时错误重试，4xx 不重试。
+const RETRY_WAITS_MS = [2000, 5000];
+async function fetchWithRetry(fetchImpl, url, init, { waits = RETRY_WAITS_MS, sleep } = {}) {
+  let lastErr;
+  for (let i = 0; i <= waits.length; i++) {
+    try {
+      const { timeoutMs, ...rest } = init;
+      const res = await fetchImpl(url, { ...rest, signal: AbortSignal.timeout(timeoutMs) });
+      if (res.ok) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+      if (!(res.status >= 500 || res.status === 429)) throw lastErr;
+    } catch (e) {
+      lastErr = e;
+      if (/^HTTP (4\d\d)/.test(e.message || "") && !/^HTTP 429/.test(e.message)) throw e;
+    }
+    if (i < waits.length) await (sleep || ((ms) => new Promise((r) => setTimeout(r, ms))))(waits[i]);
+  }
+  throw lastErr;
+}
+
+export async function fetchAll({ fetchImpl = fetch, now = Date.now(), timeoutMs = 15000, only, retryWaits, sleep } = {}) {
   const names = only || Object.keys(SOURCES);
   const errors = {};
   const lists = await Promise.all(
     names.map(async (name) => {
       const s = SOURCES[name];
       try {
-        const res = await fetchImpl(typeof s.url === "function" ? s.url(now) : s.url, {
-          headers: { "user-agent": UA, accept: s.kind === "json" ? "application/json" : "*/*" },
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetchWithRetry(
+          fetchImpl,
+          typeof s.url === "function" ? s.url(now) : s.url,
+          { headers: { "user-agent": UA, accept: s.kind === "json" ? "application/json" : "*/*" }, timeoutMs },
+          { waits: retryWaits, sleep }
+        );
         const body = s.kind === "json" ? await res.json() : await res.text();
         let items = s.parse(body, now);
         if (!items.length) throw new Error("解析出 0 条，页面结构可能变了");
