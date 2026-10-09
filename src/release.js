@@ -47,3 +47,38 @@ export function checkSeed(seed, version, { audioBytes, minPlayable = MIN_PLAYABL
   // audioOk：只看能不能播（回滚到旧版时用）；playable：内容也全部合格
   return { ok: errors.length === 0, playable, audioOk, errors };
 }
+
+// ---------- 下架（takedown）与作废（void） ----------
+// KV "takedown" = { ids: [条目 id], audio: [音频地址], updatedAt }。/api/schedule 每次读都按它过滤，
+// 并重新连续排开始时间（无空档，总长变短）——所以不管哪个版本在线上（包括回滚到的旧版），被下架的条目都不会播。
+export function takedownMatches(td, it) {
+  if (!td || !it) return false;
+  return (Array.isArray(td.ids) && td.ids.includes(it.id)) || (Array.isArray(td.audio) && !!it.audio && td.audio.includes(it.audio));
+}
+export function applyTakedown(items, td) {
+  return (items || []).filter((it) => !takedownMatches(td, it));
+}
+export function addTakedown(td, id, audios = []) {
+  const ids = new Set(td?.ids || []), audio = new Set(td?.audio || []);
+  ids.add(id); for (const a of audios) if (a) audio.add(a);
+  return { ids: [...ids], audio: [...audio], updatedAt: new Date().toISOString() };
+}
+export function removeTakedown(td, id, audios = []) {
+  const drop = new Set(audios);
+  return { ids: (td?.ids || []).filter((x) => x !== id), audio: (td?.audio || []).filter((a) => !drop.has(a)), updatedAt: new Date().toISOString() };
+}
+// 作废的版本记在指针元数据 pointer.void 里：use / rollback 都拒绝切到作废版本（第二道保险）。
+export const isVoid = (ptr, v) => Array.isArray(ptr?.void) && ptr.void.includes(v);
+export function markVoid(ptr, versions, reason) {
+  const set = new Set(ptr?.void || []);
+  const reasons = { ...(ptr?.voidReasons || {}) };
+  for (const v of versions) { set.add(v); if (reason && !reasons[v]) reasons[v] = reason; }
+  return { ...(ptr || {}), void: [...set].sort(), voidReasons: reasons };
+}
+// 回滚要切到哪儿：返回 { ok, to, reason }（纯函数，dry-run 和测试都用它）
+export function planRollback(ptr, hasSeed = () => true) {
+  if (!ptr?.previous) return { ok: false, reason: "没有上一版" };
+  if (isVoid(ptr, ptr.previous)) return { ok: false, to: ptr.previous, reason: `上一版 ${ptr.previous} 已作废（${ptr.voidReasons?.[ptr.previous] || "void"}），拒绝回滚` };
+  if (!hasSeed(ptr.previous)) return { ok: false, to: ptr.previous, reason: `KV 里没有 seed:${ptr.previous}` };
+  return { ok: true, to: ptr.previous };
+}

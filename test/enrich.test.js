@@ -13,7 +13,7 @@ const llmSays = (obj) => async () => JSON.stringify(obj);
 const good = { kind: "project", what: "一个给编程助手用的画图技能", who: "常写技术文档的开发者", highlight: "图表风格能跟网站统一" };
 
 test("正常的一句话点评能通过：白名单词不算数字", () => {
-  assert.equal(hasNumber("一句话点评：这是一个十分好用的工具，唯一缺点是文档少"), false);
+  assert.equal(hasNumber("一句话点评：这是一个十分好用的工具，风格统一，缺点是文档少"), false);
   assert.equal(hasNumber("快了三倍"), true);
   assert.equal(hasNumber("支持 10 种语言"), true);
   assert.equal(hasNumber("一百多人"), true);

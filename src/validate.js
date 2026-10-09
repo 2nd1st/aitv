@@ -3,7 +3,7 @@ import { numberViolations } from "./digits.js";
 // 1. 模板正文里不许出现任何数字：阿拉伯数字，或中文数字/倍数词。数字只能经 {{字段}} 进来。
 // 2. 数字字段绑死自己的单位：{{points}} 后面必须紧跟「分」，模型只能挑句式，不能换单位或对调字段。
 // 3. 文本字段（标题等）原样插入，里面带的数字来自源数据本身。
-// 常用词白名单（一个、一句话、唯一、十分……）和数字规则在 digits.js，与 enrich.js 共用。
+// 常用词白名单（一个、一句话、统一、十分……）和数字规则在 digits.js，与 enrich.js 共用。
 
 // 规则 A：每个字段写明它在源接口里到底是什么数；含义没核实的字段不许进稿（已删 votes / sourceCount / discussions，
 // HN 和 Product Hunt 的 rank 也已在 sources.js 去掉）。
@@ -30,7 +30,7 @@ const SLOT = /\{\{(\w+)\}\}/g;
 
 export function checkTemplate(template, fields) {
   const errors = [];
-  // 先去掉 {{字段}}，再由 digits.js 去掉白名单常用词（一个、一句话、唯一……），剩下的一律不许有数字
+  // 先去掉 {{字段}}，再由 digits.js 去掉白名单常用词（一个、一句话、统一……），剩下的一律不许有数字
   const v = numberViolations(template.replace(SLOT, " "));
   if (v.includes("arabic")) errors.push("模板正文里有阿拉伯数字");
   if (v.includes("chinese")) errors.push("模板正文里有中文数字或倍数词");

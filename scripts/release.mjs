@@ -3,12 +3,15 @@
 //   node scripts/release.mjs check <version>    只校验本地 releases/<version>
 //   node scripts/release.mjs publish <version>  校验 → R2 里还没有的音频才上传（<hash>.mp3 + <hash>.json 时间轴）→ seed 写 KV（seed:<version>）。不切换。
 //   node scripts/release.mjs use <version>      校验 + 逐条 HEAD 线上 /audio/<version>/… 确认能播，可播 >= 15 条才把 KV 指针切过去
-//   node scripts/release.mjs rollback           KV 指针切回 previous（不用重新部署）
+//   node scripts/release.mjs rollback [--dry-run]  KV 指针切回 previous（不用重新部署）；previous 已作废就拒绝
+//   node scripts/release.mjs takedown <id>      下架：id（和它在各版本里的音频地址）进 KV "takedown"，/api/schedule 立刻按它过滤；
+//                                               含这条的版本自动标成作废（pointer.void），use / rollback 都不会再切过去
+//   node scripts/release.mjs untakedown <id>    撤销下架（不撤销作废，作废版本要人工判断）
 import { readFileSync, existsSync, statSync, readdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkSeed, MIN_PLAYABLE } from "../src/release.js";
+import { checkSeed, MIN_PLAYABLE, addTakedown, removeTakedown, isVoid, markVoid, planRollback, takedownMatches } from "../src/release.js";
 import { gitGuard } from "./guard.mjs";
 
 const ROOT = new URL("../releases/", import.meta.url);
@@ -37,10 +40,11 @@ function report(v, r) {
 const [cmd, v] = process.argv.slice(2);
 // publish / use 会改线上：只允许从干净的 main（HEAD == origin/main）发。rollback 只把指针换回上一版，应急用，不设闸。
 const guard = cmd === "publish" || cmd === "use" ? gitGuard() : null;
+const localVersions = () => readdirSync(ROOT).filter((d) => existsSync(seedPath(d))).sort();
 if (cmd === "list") {
   const ptr = kvGet("pointer") || {};
   for (const d of readdirSync(ROOT).filter((d) => existsSync(seedPath(d))).sort())
-    console.log(`${d}${d === ptr.version ? "  ← 线上" : d === ptr.previous ? "  ← 上一版（可回滚）" : ""}`);
+    console.log(`${d}${d === ptr.version ? "  ← 线上" : ""}${d === ptr.previous ? (isVoid(ptr, d) ? "  ← 上一版（已作废，不能回滚）" : "  ← 上一版（可回滚）") : ""}${isVoid(ptr, d) && d !== ptr.previous ? "  （作废）" : ""}`);
 } else if (cmd === "check") {
   const r = check(v); report(v, r); process.exit(r.ok ? 0 : 1);
 } else if (cmd === "publish") {
@@ -64,6 +68,7 @@ if (cmd === "list") {
 } else if (cmd === "use") {
   const r = check(v); report(v, r);
   if (!r.ok) { console.log("不切换，线上保持原版本"); process.exit(1); }
+  { const p0 = kvGet("pointer") || {}; if (isVoid(p0, v)) { console.log(`${v} 已作废（${p0.voidReasons?.[v] || "void"}），拒绝切换`); process.exit(1); } }
   if (!kvGet(`seed:${v}`)) { console.log(`KV 里没有 seed:${v}，先 publish`); process.exit(1); }
   let live = 0;
   for (const it of readSeed(v).items) {
@@ -79,13 +84,37 @@ if (cmd === "list") {
     kvPutJson("pointer", { ...ptr, commit: guard.commit, commitRecordedAt: new Date().toISOString() });
     console.log(`已经是线上版本；指针记下提交 ${guard.commit.slice(0, 7)}`); process.exit(0);
   }
-  kvPutJson("pointer", { version: v, previous: ptr.version || null, commit: guard.commit, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString() });
+  kvPutJson("pointer", { ...ptr, version: v, previous: ptr.version || null, commit: guard.commit, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString(), rolledBack: false });
   console.log(`线上指针：${ptr.version} → ${v}（上一版 ${ptr.version} 保留，可回滚）。KV 全球生效约一分钟。`);
 } else if (cmd === "rollback") {
   const ptr = kvGet("pointer") || {};
-  if (!ptr.previous || !kvGet(`seed:${ptr.previous}`)) { console.log("没有可回滚的上一版"); process.exit(1); }
-  kvPutJson("pointer", { version: ptr.previous, previous: ptr.version, commit: ptr.previousCommit || null, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString(), rolledBack: true });
-  console.log(`已回滚：${ptr.version} → ${ptr.previous}。KV 全球生效约一分钟，不用重新部署。`);
+  const plan = planRollback(ptr, (x) => !!kvGet(`seed:${x}`));
+  if (!plan.ok) { console.log(`不回滚：${plan.reason}`); process.exit(1); }
+  if (process.argv.includes("--dry-run")) { console.log(`（dry-run）会回滚：${ptr.version} → ${plan.to}`); process.exit(0); }
+  kvPutJson("pointer", { ...ptr, version: plan.to, previous: ptr.version, commit: ptr.previousCommit || null, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString(), rolledBack: true });
+  console.log(`已回滚：${ptr.version} → ${plan.to}。KV 全球生效约一分钟，不用重新部署。`);
+} else if (cmd === "takedown" || cmd === "untakedown") {
+  if (!v) { console.log(`用法：node scripts/release.mjs ${cmd} <条目 id>`); process.exit(2); }
+  // 本地各版本里这条的音频地址一起记上（同一条换了 id 也能按音频拦住）
+  const hits = [];
+  for (const d of localVersions()) for (const it of readSeed(d).items) if (it.id === v) hits.push({ version: d, audio: it.audio });
+  const audios = [...new Set(hits.map((h) => h.audio).filter(Boolean))];
+  const td = kvGet("takedown") || { ids: [], audio: [] };
+  if (cmd === "untakedown") {
+    kvPutJson("takedown", removeTakedown(td, v, audios));
+    console.log(`已撤销下架 ${v}（作废的版本保持作废）`); process.exit(0);
+  }
+  const next = addTakedown(td, v, audios);
+  kvPutJson("takedown", next);
+  // 含这条的版本全部作废：本地 releases/ 和 KV 里线上 / 上一版的 seed 都查
+  const ptr = kvGet("pointer") || {};
+  const affected = new Set(hits.map((h) => h.version));
+  for (const x of [ptr.version, ptr.previous].filter(Boolean)) {
+    const seed = kvGet(`seed:${x}`);
+    if (seed?.items?.some((it) => takedownMatches(next, it))) affected.add(x);
+  }
+  if (affected.size) kvPutJson("pointer", markVoid(ptr, [...affected], `含已下架条目 ${v}`));
+  console.log(`已下架 ${v}（音频 ${audios.join(", ") || "无"}）；作废版本：${[...affected].join(", ") || "无"}。/api/schedule 约半分钟到一分钟内生效。`);
 } else {
-  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback"); process.exit(2);
+  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id> | untakedown <id>"); process.exit(2);
 }

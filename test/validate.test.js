@@ -37,8 +37,8 @@ test("节目单连续无空档，缺音频的跳过，播完循环", () => {
 });
 
 test("正常稿子里的「一句话点评」能通过：白名单词先去掉再查", () => {
-  assert.equal(buildSpoken("一句话点评：{{title}} 是一个十分顺手的工具，唯一要做的就是今天试一下。", fields),
-    "一句话点评：Hy4 preview 是一个十分顺手的工具，唯一要做的就是今天试一下。");
+  assert.equal(buildSpoken("一句话点评：{{title}} 是一个十分顺手的工具，要做的就是今天试一下。", fields),
+    "一句话点评：Hy4 preview 是一个十分顺手的工具，要做的就是今天试一下。");
   // 白名单之外的「一」照样拦
   assert.equal(buildSpoken("{{title}} 是新一代工具", fields), null);
   assert.equal(buildSpoken("{{title}}，一键安装", fields), null);
@@ -53,4 +53,10 @@ test("数字规则（架构师）：同一 / 一致 进白名单；大写数字�
   assert.ok(WL.includes("同一") && WL.includes("一致"));
   for (const s of ["新内容会陆续补充", "大陆用户也能用", "同一套引擎", "口径不一致", "风格保持一致"]) assert.equal(hasNum(s), false, s);
   for (const s of ["第一次禁止虐待模型", "第一", "首发两款", "三倍速度", "一次"]) assert.equal(hasNum(s), true, s);
+});
+
+test("唯一 不在白名单（宣称独家），会被拦", () => {
+  assert.ok(!WL.includes("唯一"));
+  assert.equal(hasNum("它是唯一支持离线的工具"), true);
+  assert.equal(hasNum("风格统一、口径一致"), false);
 });
