@@ -80,7 +80,8 @@ for (const e of order) {
 }
 
 // 封面图转存到自家 R2（/img/<key>），第三方地址不进节目单
-const withImage = await cacheItemImages(out, { log });
+const hints = Object.fromEntries(order.filter((e) => e.imageHint).map((e) => [e.id, e.imageHint]));
+const withImage = await cacheItemImages(out, { log, hints });
 
 const perSource = {}, perKind = {};
 for (const p of out) { perSource[p.source] = (perSource[p.source] || 0) + 1; perKind[p.kind] = (perKind[p.kind] || 0) + 1; }

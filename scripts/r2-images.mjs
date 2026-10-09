@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { storeImage } from "../src/images.js";
+import { storeScreenedImage } from "../src/imagepick.js";
 
 const BASE = process.env.AITV_BASE || "https://aitv.qiaomu.ai";
 const BUCKET = "aitv-audio";
@@ -27,15 +27,18 @@ export function r2ImageStore() {
   };
 }
 
-// it.image 进来时是原文页上的封面图地址（og:image / twitter:image），出去时是 /img/<key> 或 null
-export async function cacheItemImages(items, { store = r2ImageStore(), log = () => {} } = {}) {
+// it.image 进来时是原文页上的封面图地址（og:image / twitter:image，补料时已按地址筛过），出去时是 /img/<key> 或 null。
+// 下载只经 storeImage；写进桶之前按真实字节再筛一次（src/imagepick.js：尺寸、像不像纯 logo）。
+// hints：{ [id]: { logoAlt } }（补料时从 og:image:alt 看出来的，toSeedItem 不带它，所以单独传）
+export async function cacheItemImages(items, { store = r2ImageStore(), log = () => {}, hints = {} } = {}) {
   let ok = 0;
   for (const it of items) {
     const src = it.image;
     if (typeof src === "string" && src.startsWith("/img/")) { ok++; continue; }
-    it.image = src ? await storeImage(store, src, it.url) : null;
+    const r = src ? await storeScreenedImage(store, src, it.url, { hint: hints[it.id] || {} }) : { image: null, reason: "没有图" };
+    it.image = r.image;
     if (it.image) ok++;
-    log(`${it.image ? "🖼" : "·"} ${it.id} ${it.image || "(无图)"}`);
+    log(`${it.image ? "🖼" : "·"} ${it.id} ${it.image || `(无图：${r.reason})`}`);
   }
   return ok;
 }

@@ -38,7 +38,10 @@ function unitHint(k) {
 }
 
 // HN 拉的是 Algolia front_page 标签：确实在首页上，但返回顺序不是名次，所以只说「首页热帖」，不说第几名
-const SOURCE_LABEL = { "Hacker News": "Hacker News 首页热帖（不要说第几名）", "Product Hunt": "Product Hunt（不要说第几名）" };
+const SOURCE_LABEL = { "Hacker News": "Hacker News 首页热帖（不要说第几名）",
+  "Product Hunt": "Product Hunt 昨天（太平洋时间）的日榜（这是昨天的榜，全文不许说「今天」；要说名次只能用给出的 {{phDailyRank}} 写法，没给就不说第几名；{{phScore}} 是 PH 的综合分，不是票数）" };
+// Product Hunt 用的是昨天已经结束的日榜：整条稿子都不许出现「今天」
+const isYesterdayPH = (source, fields) => source === "Product Hunt" || "phDailyRank" in (fields || {}) || "phScore" in (fields || {});
 const KIND_LABEL = { product: "产品", project: "开源项目", commentary: "评论 / 观点文章", news: "新闻报道" };
 export const opening = (s) => String(s || "").replace(/^[\s，。、“”「」]+/, "").slice(0, OPENING_CHARS);
 
@@ -94,7 +97,7 @@ ${prevTake ? `- 上一条的点评是：「${prevTake}」。这条点评换个�
 只输出 JSON，不要别的文字：{"part1":"…","part2":"…","part3":"…"}`;
 }
 
-export function checkScript(parts, fields, { kind = "product", prevTake = "" } = {}) {
+export function checkScript(parts, fields, { kind = "product", prevTake = "", source = "" } = {}) {
   const errors = [];
   if (!Array.isArray(parts) || parts.length !== 3 || parts.some((p) => typeof p !== "string" || !p.trim())) {
     return { ok: false, errors: ["必须是三段非空文本"] };
@@ -110,7 +113,8 @@ export function checkScript(parts, fields, { kind = "product", prevTake = "" } =
     if (over.length) errors.push(`part${i + 1} 说过头了（${over.join("、")}），照给的信息的程度说`);
   });
   // 句式别套（验收：二十条点评十九条带「今天」、十六条以「如果你」开头）
-  if (parts[2].includes("今天")) errors.push("点评里不要用「今天」，换个说法");
+  if (isYesterdayPH(source, fields)) { if (parts.some((p) => p.includes("今天"))) errors.push("这是 Product Hunt 昨天的日榜，全文不许说「今天」"); }
+  else if (parts[2].includes("今天")) errors.push("点评里不要用「今天」，换个说法");
   if (/^[\s，。「“]*如果你/.test(parts[2])) errors.push("点评不要以「如果你」开头，换个句式");
   // 数字只是佐证：整条最多一个数字字段，且不能出现在 part1（不拿数字开场）
   const numSlots = parts.map((p) => (p.match(/\{\{(\w+)\}\}/g) || []).filter((m) => UNITS[m.slice(2, -2)]).length);
@@ -146,7 +150,7 @@ export async function writeScript(item, { llm, retries = 1, prevTake = "" } = {}
     let obj;
     try { obj = parseBrief(await llm(scriptPrompt(item, feedback, { prevTake }))); } catch (e) { last = `模型出错：${e.message || e}`; feedback = "没有按要求输出 JSON"; continue; }
     const parts = obj ? [obj.part1, obj.part2, obj.part3].map((p) => (typeof p === "string" ? p.trim() : p)) : null;
-    const chk = parts ? checkScript(parts, fields, { kind, prevTake }) : { ok: false, errors: ["不是 JSON"] };
+    const chk = parts ? checkScript(parts, fields, { kind, prevTake, source: item.source }) : { ok: false, errors: ["不是 JSON"] };
     if (chk.ok) return { kind, parts, lines: parts.map((p) => renderScript(p, fields)), attempts: attempt + 1 };
     last = chk.errors.join("；");
     feedback = last;
@@ -156,7 +160,8 @@ export async function writeScript(item, { llm, retries = 1, prevTake = "" } = {}
 }
 
 // 进 seed / 节目单的字段白名单：原文（materialText 等）一律不带。
-export const SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "template", "focus", "kind", "image", "fields", "brief", "script", "take", "lines"];
+// dateUnknown：AIHOT 原文读不出发布时间（publishedAt 为 null）时为 true
+export const SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "dateUnknown", "template", "focus", "kind", "image", "fields", "brief", "script", "take", "lines"];
 export function toSeedItem(item) {
   const out = {};
   for (const k of SEED_KEYS) if (k in item) out[k] = item[k];

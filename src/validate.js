@@ -10,7 +10,8 @@ import { numberViolations } from "./digits.js";
 export const UNITS = {
   // Hacker News（hn.algolia.com/api/v1 的 hit.points）：这条帖子在 HN 上的得分，即投票分（upvote score）。
   points: { after: " 分" },
-  // Hacker News（hit.num_comments）：这条帖子下的评论总数。
+  // 评论总数（抓取时）：Hacker News 是 hit.num_comments（帖子下的评论数）；
+  //   Product Hunt 日榜是 Post.commentsCount（这个产品发布帖下的评论数）。
   comments: { after: " 条评论" },
   // GitHub Trending（github.com/trending?since=daily 每行指向 /stargazers 的数字）：仓库累计 star 总数（抓取时）。
   stars: { after: " 颗星" },
@@ -21,8 +22,14 @@ export const UNITS = {
   // 名次，只有两处来源：
   //   GitHub Trending：在 github.com/trending?since=daily 当日列表里的位置（从 1 开始，按 GitHub 页面显示顺序）。
   //   AIHOT：openapi-v1.json 定义为「One-based position in the current AIHOT Top 10 response」。
-  //   Hacker News、Product Hunt 不给 rank（返回顺序不是名次）。
+  //   Hacker News、Product Hunt 不给 rank（返回顺序不是名次）；Product Hunt 的日榜名次单独叫 phDailyRank（见下）。
   rank: { before: "第 ", after: " 名" },
+  // Product Hunt（producthunt.com/leaderboard/daily/Y/M/D，Y/M/D = 抓取时太平洋时间的昨天，那一天的榜已经结束）：
+  //   这个产品在昨天日榜上的最终名次，从 1 开始；按页面上真实 Post 的顺序数，广告位不占名次，有官方 TopPostBadge 时以它为准。
+  //   只能念成「昨天 Product Hunt 日榜第 N 名」，不许说「今天」（sources.js 那一批名次没通过合理性检查时这个字段整批不给）。
+  phDailyRank: { before: "昨天 Product Hunt 日榜第 ", after: " 名" },
+  // Product Hunt（同一页 Post.launchDayScore）：PH 自己算的上榜当天综合分（投票、讨论、活跃度加权），不是票数，不许说成「票」。
+  phScore: { after: " 分" },
 };
 export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name", "limit"]);
 

@@ -22,7 +22,7 @@ BUCKET = "aitv-audio"
 AUDIO_CONFIG = {"format": "mp3", "sample_rate": 24000, "speech_rate": 10}
 ANCHOR_MS = 1760000000000  # 固定锚点：所有设备按同一个时钟算位置
 
-SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "template", "focus", "kind", "image", "fields", "brief", "script", "take"]
+SEED_KEYS = ["id", "source", "url", "fetchedAt", "publishedAt", "dateUnknown", "template", "focus", "kind", "image", "fields", "brief", "script", "take"]
 PART_KEYS = ["what", "who", "take"]
 
 def tag_parts(rounds, lines):
