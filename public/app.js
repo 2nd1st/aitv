@@ -6,7 +6,7 @@ const showStatus = (message = "") => { if (status.textContent !== message) statu
 // 画面：默认 /screen/（现在这版）；?ui=v4 用艾维的第四版（/screen/v4/，分支 screen-v4 原样拷过来）
 const UI = new URLSearchParams(location.search).get("ui") === "v4" ? "v4" : "default";
 if (UI === "v4") document.querySelector('link[href="/screen/tv.css"]')?.setAttribute("href", "/screen/v4/tv.css");
-const { createTV } = await import(UI === "v4" ? "/screen/v4/tv.js" : "/screen/tv.js");
+const screenModule = import(UI === "v4" ? "/screen/v4/tv.js" : "/screen/tv.js");
 
 // 校时：测 7 次往返，取往返最短的那次，偏差 = 服务器时间 - 本地中点
 const syncClock = () => measureClock();
@@ -26,7 +26,7 @@ async function loadSchedule() {
     await new Promise(resolve => setTimeout(resolve, Math.min(30000, 2000 * 2 ** Math.min(k, 4))));
   }
 }
-let [clock, body] = await Promise.all([initialClock(), loadSchedule()]);
+let [clock, body, { createTV }] = await Promise.all([initialClock(), loadSchedule(), screenModule]);
 // state = { current, next, switchAt }：到 switchAt（条目边界，所有设备同一个服务器时钟）才换成 next，不会在一条中间切
 let state = adopt(body);
 showStatus();
