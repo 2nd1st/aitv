@@ -114,7 +114,7 @@ export function createTV(root, { channel = "AI 今天", onListen, onPower, onScr
   });
 
   let cur = null;
-  function build(item) {
+  function build(item, nowMs = Date.now()) {
     const f = item.fields || {};
     picture.removeAttribute("data-has-img"); img.removeAttribute("data-ready");
     backdrop.style.backgroundImage = "";
@@ -133,6 +133,9 @@ export function createTV(root, { channel = "AI 今天", onListen, onPower, onScr
     const kind = KIND[item.kind || f.kind];
     if (kind) meta.append(el("span", null, kind));
     for (const [k, show] of STAT.filter(([k]) => isNum(f[k])).slice(0, 2)) meta.append(el("span", "stat", show(f[k])));
+    // 旧闻兜底：只在 stale 条目上标「N 小时前」，按 publishedAt 算，不假装是新的
+    const pub = Date.parse(item.publishedAt || "");
+    if (item.stale && pub) { const h = Math.max(1, Math.floor((nowMs - pub) / 3600000)); meta.append(el("span", "age", `${h} 小时前`)); }
     meta.append(link("open", item.url, "看原文 ↗"));
     const head = link("headline", item.url, f.title_zh || f.title || "");
     const sub = el("div", "sub"); const lab = el("span", "lab"); const txt = el("span", "txt");
@@ -167,7 +170,7 @@ export function createTV(root, { channel = "AI 今天", onListen, onPower, onScr
   function render(item, t, nowMs = Date.now(), ctx = {}) {
     if (!item) return;
     const mode = ctx.mode === "program" ? "program" : "live";
-    if (!cur || cur.id !== item.id) build(item);
+    if (!cur || cur.id !== item.id) build(item, nowMs);
     const motion = !reduceMotion();
     const dur = item.duration || 1;
 
