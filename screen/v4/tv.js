@@ -185,8 +185,8 @@ export function createTV(root, { channel = "AI 今天", onListen, onPower, onScr
     const kind = paused ? "paused" : muted ? "muted" : mode;
     const label = paused ? "已暂停" : muted ? "直播中 · 静音" : mode === "program" ? (ctx.episode || "准点节目") : "直播";
     if (state.dataset.kind !== kind || state.textContent !== label) { state.dataset.kind = kind; state.textContent = label; }
-    const d = new Date(nowMs);
-    clockT.data = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const d = new Date(nowMs + 8 * 3600e3);
+    clockT.data = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
     clockS.textContent = mode === "program" && ctx.count ? `第 ${ctx.index + 1} / ${ctx.count} 条` : "北京时间";
     setRail({ ...ctx, mode });
     if (mode === "program") [...rail.children].forEach((s, i) => {

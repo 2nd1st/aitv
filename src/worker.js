@@ -10,7 +10,7 @@ import { synthesize } from "./doubao.js";
 
 // 部署的是哪个提交：scripts/deploy.mjs 用 `wrangler deploy --define BUILD_COMMIT:"<sha>"` 在构建时注入；本地 / 测试里是 "dev"。
 /* global BUILD_COMMIT */
-export const COMMIT = typeof BUILD_COMMIT !== "undefined" ? BUILD_COMMIT : "dev";
+const COMMIT = typeof BUILD_COMMIT !== "undefined" ? BUILD_COMMIT : "dev";
 
 // 节目单来源：KV（namespace SCHEDULE）
 //   "pointer"         → { version, previous, commit, switchedAt }   线上指针，切换 / 回滚只改这一个 key
@@ -64,7 +64,15 @@ export default {
     }
     if (url.pathname === "/api/schedule") {
       try {
-        const body = await scheduleBody(env, Date.now());
+        let body = await scheduleBody(env, Date.now());
+        if (url.searchParams.get("compact") === "1") {
+          const compact = schedule => schedule && { ...schedule, items: schedule.items.map(item => {
+            const { brief, script, spoken, ...playback } = item;
+            return playback;
+          }) };
+          body = { version: body.version, commit: body.commit, releaseCommit: body.releaseCommit,
+            current: compact(body.current), next: compact(body.next), switchAt: body.switchAt };
+        }
         return Response.json(body, { headers: { "cache-control": "no-store" } });
       } catch (e) {
         return Response.json({ error: String(e.message || e) }, { status: 503, headers: { "cache-control": "no-store" } });

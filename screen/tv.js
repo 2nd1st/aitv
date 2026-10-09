@@ -259,8 +259,8 @@ export function createTV(root, { brand = "AITV", channel = "AI 今天", onPower,
       state.dataset.kind = kind; state.dataset.ep = ctx.episode || "";
       state.textContent = paused ? "已暂停" : mode === "program" ? (ctx.episode || "准点节目") : "直播";
     }
-    const d = new Date(nowMs);
-    clockT.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const d = new Date(nowMs + 8 * 3600e3);
+    clockT.textContent = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
     clockS.textContent = mode === "program" && ctx.count ? `第 ${ctx.index + 1} / ${ctx.count} 条` : "北京时间";
 
     setRail({ ...ctx, mode });

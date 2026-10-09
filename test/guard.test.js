@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { guardProblems } from "../scripts/guard.mjs";
-import worker, { COMMIT } from "../src/worker.js";
+import worker from "../src/worker.js";
 
 const ok = { branch: "main", porcelain: "", head: "abc1234def", originMain: "abc1234def" };
 test("部署闸门：只放行干净的 main 且 HEAD == origin/main", () => {
@@ -20,7 +20,7 @@ test("/api/schedule 带 version、commit（Worker 构建时注入，测试里是
   const res = await worker.fetch(new Request("https://x/api/schedule"), env);
   const body = await res.json();
   assert.equal(body.version, "20261009-1227");
-  assert.equal(body.commit, COMMIT); assert.equal(COMMIT, "dev");
+  assert.equal(body.commit, "dev");
   assert.equal(body.releaseCommit, "c0ffee1");
   assert.equal(body.items.length, 1);
 });

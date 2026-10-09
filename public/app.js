@@ -1,47 +1,54 @@
 // 时钟、节目单、音频（沃兹）。画面交给 screen/tv.js（艾维）。
 import { locate, pick, adopt, walk as walkAt } from "/timeline.js";
+import { fetchJSON, measureClock, validSchedule } from "/client.js";
+const status = document.getElementById("player-status");
+const showStatus = (message = "") => { if (status.textContent !== message) status.textContent = message; status.hidden = !message; };
 // 画面：默认 /screen/（现在这版）；?ui=v4 用艾维的第四版（/screen/v4/，分支 screen-v4 原样拷过来）
 const UI = new URLSearchParams(location.search).get("ui") === "v4" ? "v4" : "default";
 if (UI === "v4") document.querySelector('link[href="/screen/tv.css"]')?.setAttribute("href", "/screen/v4/tv.css");
 const { createTV } = await import(UI === "v4" ? "/screen/v4/tv.js" : "/screen/tv.js");
 
 // 校时：测 7 次往返，取往返最短的那次，偏差 = 服务器时间 - 本地中点
-async function syncClock() {
-  const samples = [];
-  for (let i = 0; i < 7; i++) {
-    const t0 = performance.now();
-    const r = await fetch("/api/time", { cache: "no-store" });
-    const { now } = await r.json();
-    const t1 = performance.now();
-    samples.push({ rtt: t1 - t0, offset: now - (performance.timeOrigin + (t0 + t1) / 2) });
+const syncClock = () => measureClock();
+async function initialClock() {
+  for (;;) {
+    try { return await syncClock(); }
+    catch { showStatus("暂时无法连接直播，正在重试…"); await new Promise(resolve => setTimeout(resolve, 3000)); }
   }
-  samples.sort((a, b) => a.rtt - b.rtt);
-  return samples[0];
 }
-
 async function loadSchedule() {
   for (let k = 0; ; k++) {
     try {
-      const r = await fetch("/api/schedule", { cache: "no-store" });
-      if (r.ok) return await r.json();
+      const body = await fetchJSON("/api/schedule?compact=1", { timeout: 15000 });
+      if (validSchedule(body)) return body;
     } catch {}
-    await new Promise((ok) => setTimeout(ok, Math.min(30000, 2000 * 2 ** k)));
+    showStatus("节目单暂时不可用，正在重试…");
+    await new Promise(resolve => setTimeout(resolve, Math.min(30000, 2000 * 2 ** Math.min(k, 4))));
   }
 }
-let [clock, body] = await Promise.all([syncClock(), loadSchedule()]);
+let [clock, body] = await Promise.all([initialClock(), loadSchedule()]);
 // state = { current, next, switchAt }：到 switchAt（条目边界，所有设备同一个服务器时钟）才换成 next，不会在一条中间切
 let state = adopt(body);
+showStatus();
 const now = () => performance.timeOrigin + performance.now() + clock.offset;
 
 // 每分钟重新校时 + 拉节目单。服务器保证 switchAt 至少在 90 秒后，所以切换前一定能拿到 next。
 // 紧急下架时服务器直接换 current（没有 next），这里照收，下一帧就切。
-setInterval(async () => {
-  try { const c = await syncClock(); if (c.rtt < 1500) clock = c; } catch {}
+let refreshing = false;
+async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
   try {
-    const r = await fetch("/api/schedule", { cache: "no-store" });
-    if (r.ok) { state = adopt(await r.json()); primeNext(); }
-  } catch {}
-}, 60000);
+    const [c, schedule] = await Promise.allSettled([syncClock(), fetchJSON("/api/schedule?compact=1", { timeout: 15000 })]);
+    if (c.status === "fulfilled" && c.value.rtt < 1500) clock = c.value;
+    if (schedule.status === "fulfilled" && validSchedule(schedule.value)) {
+      state = adopt(schedule.value); primeNext();
+    }
+  } finally { refreshing = false; }
+}
+setInterval(refresh, 60000);
+window.addEventListener("online", refresh);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 
 let on = false, playing = null; // playing: { id, audio }
 const switchLog = []; // 每次换条：什么时候开始换、什么时候真的出声（playing 事件），用来量切换有没有卡
@@ -82,7 +89,7 @@ prefetchAround(now());
 let paused = false, frozenAt = 0, lag = 0;
 const vnow = () => (paused ? frozenAt : now() - lag);
 // 此刻（本地时间线上）在播的条目
-function here(ms = vnow()) { const s = pick(state, ms); const { i, t } = locate(s, ms); return { s, i, t, item: s.items[i] }; }
+function here(ms = vnow()) { const s = pick(state, ms); const { i, t } = locate(s, ms); return { s, i, t, item: s?.items?.[i] }; }
 window.__aitv = { get clock() { return clock; }, get state() { return state; }, get schedule() { return pick(state, now()); }, now, locate: () => { const h = here(now()); return { i: h.i, t: h.t, version: h.s.version, id: h.item?.id }; } };
 // 这条音频此刻应该在第几秒（按服务器时钟现算；不在这条上了返回 null）
 function targetT(audio) {
@@ -117,11 +124,13 @@ function positionOnly(item, t) {
 
 let lastFix = 0;
 function syncAudio(item, t) {
+  if (!item) { playing?.audio.pause(); playing = null; return; }
   const a = audioFor(item);
   if (!playing || playing.audio !== a) {
     if (playing) playing.audio.pause();
+    const kind = playing ? "switch" : "start";
     playing = { id: item.id, audio: a };
-    const rec = { id: item.id, kind: playing ? "switch" : "start", at: now(), ready: a.readyState, primed: primed?.audio === a };
+    const rec = { id: item.id, kind, at: now(), ready: a.readyState, primed: primed?.audio === a };
     switchLog.push(rec); if (switchLog.length > 20) switchLog.shift();
     a.addEventListener("playing", () => { rec.playingAt = now(); rec.stallMs = Math.round(rec.playingAt - rec.at); }, { once: true });
     // 预加载好的那条已经停在正确位置：差得不多就不 seek（seek 本身要等几百毫秒），直接放，漂移交给后面的校正
@@ -225,6 +234,12 @@ function warmNext(ms) {
 function frame() {
   const n = vnow();
   const { item, t } = here(n);
+  if (!item) {
+    playing?.audio.pause(); playing = null;
+    showStatus("暂无可播节目，更新后将自动接上直播");
+    requestAnimationFrame(frame); return;
+  }
+  showStatus();
   if (!paused) warmNext(n);
   showAge(item);
   if (!paused) { if (on || !warmBlocked) syncAudio(item, t); else positionOnly(item, t); }
@@ -235,3 +250,12 @@ function frame() {
 requestAnimationFrame(frame);
 window.__aitv.player = { switchLog, tapLog, get warmBlocked() { return warmBlocked; }, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
   drift() { const a = playing?.audio; if (!a) return null; const { t } = here(); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };
+
+// Keyboard shortcuts never override links, buttons or editable fields.
+document.addEventListener("keydown", (event) => {
+  if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.target.closest("a,button,input,textarea,select,[contenteditable],dialog")) return;
+  if (event.code === "Space") { event.preventDefault(); if (!on) { tv.powerOn?.(true); listen(); } else if (paused) resume(); else pause(); }
+  if (event.key.toLowerCase() === "l") goLive();
+});
+
+performance.mark("aitv-ready");

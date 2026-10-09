@@ -29,14 +29,24 @@ import { readFileSync } from "node:fs";
 const toml = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
 const name = /^name\s*=\s*"([^"]+)"/m.exec(toml)[1];
 const crons = (/^\[triggers\][^[]*?crons\s*=\s*\[([^\]]*)\]/ms.exec(toml)?.[1] || "").match(/"[^"]+"/g)?.map((x) => x.slice(1, -1)) || [];
-const token = process.env.CLOUDFLARE_API_TOKEN;
+// Reuse Wrangler's OAuth session when no API token was supplied. Never log credentials.
+const token = process.env.CLOUDFLARE_API_TOKEN || JSON.parse(execFileSync("npx", ["wrangler", "auth", "token", "--json"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })).token;
 const acct = process.env.CLOUDFLARE_ACCOUNT_ID || (await (await fetch("https://api.cloudflare.com/client/v4/accounts", { headers: { authorization: `Bearer ${token}` } })).json()).result?.[0]?.id;
 const api = `https://api.cloudflare.com/client/v4/accounts/${acct}/workers/scripts/${name}/schedules`;
 const H = { authorization: `Bearer ${token}`, "content-type": "application/json" };
-const cur = (await (await fetch(api, { headers: H })).json()).result?.schedules?.map((x) => x.cron) || [];
+const schedules = async () => {
+  const response = await fetch(api, { headers: H, signal: AbortSignal.timeout(15000) });
+  const body = await response.json();
+  if (!response.ok || !body.success || !Array.isArray(body.result?.schedules)) throw new Error("无法核对定时触发器；请检查 Cloudflare 认证和账户权限");
+  return body.result.schedules.map(x => x.cron);
+};
+const cur = await schedules();
 if (JSON.stringify([...cur].sort()) !== JSON.stringify([...crons].sort())) {
   const r = await (await fetch(api, { method: "PUT", headers: H, body: JSON.stringify(crons.map((cron) => ({ cron }))) })).json();
   if (!r.success) { console.error("✗ 定时触发器设置失败", JSON.stringify(r.errors)); process.exit(1); }
 }
-const now = (await (await fetch(api, { headers: H })).json()).result?.schedules?.map((x) => x.cron) || [];
+const now = await schedules();
+if (JSON.stringify([...now].sort()) !== JSON.stringify([...crons].sort())) {
+  console.error("✗ 线上定时触发器与 wrangler.toml 不一致"); process.exit(1);
+}
 console.log(`定时触发器：${now.join(", ") || "无"}`);
