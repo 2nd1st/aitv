@@ -139,7 +139,7 @@ if (cmd === "list") {
   // 定时流水线的状态（src/pipeline.js）：上一轮做了什么、在途 / 待上线 / 丢弃的条目、今天的合成额度
   const idx = kvGet("pipe:index") || {};
   const d = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10).replace(/-/g, "");
-  console.log(JSON.stringify({ last: idx.last, pending: idx.pending, ready: idx.ready, dropped: (idx.dropped || []).slice(-5), daily: idx.daily, ttscap: kvGet(`ttscap:${d}`), error: kvGet("pipe:error") }, null, 1));
+  console.log(JSON.stringify({ last: idx.last, pending: idx.pending, ready: idx.ready, dropped: (idx.dropped || []).slice(-5), skipped: (idx.skipped || []).slice(-10), daily: idx.daily, ttscap: kvGet(`ttscap:${d}`), error: kvGet("pipe:error") }, null, 1));
   for (const id of [...(idx.pending || []), ...(idx.ready || [])].concat(v ? [v] : [])) {
     const st = kvGet(`pipe:item:${id}`);
     if (st) console.log(`\n${id}：${st.status} @${st.step} ${st.why || ""}\n  ${JSON.stringify({ kind: st.results?.brief?.kind, lines: st.results?.script?.lines, audio: st.results?.tts?.audio, duration: st.results?.tts?.duration, image: st.results?.tts?.image, errors: st.errors })}`);
