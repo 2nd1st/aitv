@@ -1,6 +1,6 @@
 // 时钟、节目单、音频（沃兹）。画面交给 screen/tv.js（艾维）。
 import { createTV } from "/screen/tv.js";
-import { locate, pick, adopt } from "/timeline.js";
+import { locate, pick, adopt, walk as walkAt } from "/timeline.js";
 
 // 校时：测 7 次往返，取往返最短的那次，偏差 = 服务器时间 - 本地中点
 async function syncClock() {
@@ -70,18 +70,8 @@ function primeNext() {
 
 }
 primeNext();
-// 从时刻 ms 起往后数 k 条（跨 switchAt 时自动换成 next 的条目）
-function walk(ms, k) {
-  const out = [];
-  let cur = ms;
-  for (let j = 0; j < k; j++) {
-    const s = pick(state, cur), { i, t } = locate(s, cur), it = s.items[i];
-    if (!it) break;
-    out.push(it);
-    cur += Math.max(1, Math.round((it.duration - t) * 1000)); // 跳到这条结束（= 下一条开始）
-  }
-  return out;
-}
+// 从时刻 ms 起往后数 k 条（跨 switchAt 时自动换成 next 的条目）：见 timeline.js walk
+const walk = (ms, k) => walkAt(state, ms, k);
 const prefetchAround = (ms) => walk(ms, 2).forEach(audioFor);
 prefetchAround(now());
 
@@ -178,8 +168,13 @@ const tv = createTV(document.getElementById("root"), {
 });
 
 // 底部滚动条：接下来的几条
+// 列表没变就交出同一个数组（屏幕那边按内容比较，这里再挡一层：只有真的变了才重画）
+let lastUp = [], lastUpKey = "";
 function upcoming(ms, k = 5) {
-  return walk(ms, k + 1).slice(1).map((it) => ({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source }));
+  const list = walk(ms, k + 1).slice(1);
+  const key = list.map((it) => `${it.id}|${it.audio}`).join(",");
+  if (key !== lastUpKey) { lastUpKey = key; lastUp = list.map((it) => ({ title: it.fields?.title_zh || it.fields?.title || "", source: it.source })); }
+  return lastUp;
 }
 
 // 旧条目（节目单里 stale: true，12 小时内一条都没有时留下的）右上角小字「N 小时前」；画面本身归 screen/ 管，这里只叠一层
