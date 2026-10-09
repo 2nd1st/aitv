@@ -7,3 +7,5 @@ public/screen/
 releases/*/audio
 node_modules
 audio-cache
+screen/_sched.json
+screen/_img/

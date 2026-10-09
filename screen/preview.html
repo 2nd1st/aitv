@@ -3,63 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI 今天 · 画面预览（示例数据）</title>
+<title>AI 今天 · 画面预览</title>
 <link rel="stylesheet" href="./tv.css">
 </head>
 <body>
 <div id="root"></div>
 <script type="module">
 import { createTV } from "./tv.js";
-
-// 示例数据，只用来看画面，内容是编的。真实节目单来自 /api/schedule。
-const items = [
-  { id: "demo-1", template: "title", duration: 24, source: "Hacker News", url: "https://news.ycombinator.com/",
-    fields: { title: "Show HN: A local-first agent that edits your codebase offline", title_zh: "示例：一个能离线改代码的本地编程助手",
-      rank: 1, points: 812, comments: 233,
-      what: "一个完全跑在你自己电脑上的编程助手，不联网也能读懂整个仓库并直接改代码。",
-      who: "公司代码不能外传、又想用上 AI 改代码的团队，今天会最在意它。" },
-    take: "如果你在做内网开发，今天就拿一个小仓库试一下，看它改得准不准。" },
-  { id: "demo-2", template: "title", duration: 22, source: "GitHub Trending", url: "https://github.com/trending",
-    fields: { title: "example/agent-kit", stars_today: 2417, stars: 18930,
-      what: "把常见的智能体能力拆成一个个小模块，像搭积木一样拼出自己的助手。",
-      who: "想自己做智能体、又不想被大框架绑住的开发者。",
-      highlight: "每个模块都能单独替换，换模型不用重写。" } },
-  { id: "demo-3", template: "title", duration: 20, source: "Product Hunt", url: "https://www.producthunt.com/",
-    fields: { title: "Example Notes AI", title_zh: "示例：会自己整理会议纪要的笔记应用",
-      what: "开会时自动记下谁说了什么，会后直接给出待办和负责人。",
-      who: "每天开很多会、会后还要自己补纪要的人。" },
-    take: "先别换掉你现在的笔记工具，拿下一次周会试一次就够了。" },
-];
-const total = items.reduce((s, i) => s + i.duration, 0);
+// 读本地存的一份节目单快照（_sched.json，不进仓库）。没有就提示。
+const s = await fetch("./_sched.json").then((r) => r.json()).catch(() => ({ items: [] }));
+const items = s.items;
 const q = new URLSearchParams(location.search);
+// ?shot=1：截图用，关掉过渡，让无头浏览器拍到最终画面
+if (q.get("shot") === "1") document.head.append(Object.assign(document.createElement("style"), { textContent: "*{transition:none!important}" }));
 const mode = q.get("mode") === "program" ? "program" : "live";
-const fI = q.has("i") ? +q.get("i") : null, fT = q.has("t") ? +q.get("t") : null;
-
-let paused = false, pausedAt = null;
+const fI = q.has("i") ? +q.get("i") : null, fT = q.has("t") ? +q.get("t") : 0;
+const total = items.reduce((a, b) => a + b.duration, 0);
+let paused = false, frozen = null;
 const tv = createTV(document.getElementById("root"), {
-  onScreenClick: () => { if (paused) goLive(); else { paused = true; pausedAt = locate(Date.now()); tv.setPaused(true); } },
-  onGoLive: () => goLive(),
+  onListen: () => {},
+  onScreenClick: () => { if (paused) { paused = false; tv.setPaused(false); } else { paused = true; frozen = at(Date.now()); tv.setPaused(true); } },
+  onGoLive: () => { paused = false; tv.setPaused(false); },
 });
-function goLive() { paused = false; pausedAt = null; tv.setPaused(false); }
-
 function locate(now) {
   let pos = ((now / 1000) % total + total) % total;
   for (let i = 0; i < items.length; i++) { if (pos < items[i].duration) return { i, t: pos }; pos -= items[i].duration; }
   return { i: 0, t: 0 };
 }
-function ctxFor(i) {
-  const upcoming = [1, 2, 3].map((k) => items[(i + k) % items.length]).map((x) => ({ title: x.fields.title_zh || x.fields.title, source: x.source }));
-  return { mode, episode: "早间 · 10月9日", index: i, count: items.length, upcoming };
-}
-function frame() {
+const at = (now) => fI != null ? { i: fI, t: fT } : locate(now);
+const up = (i) => [1, 2, 3, 4].map((k) => items[(i + k) % items.length]).map((x) => ({ title: x.fields.title_zh || x.fields.title, source: x.source }));
+if (q.get("listen") === "1") tv.setMuted(false);
+if (q.get("paused") === "1") { tv.setMuted(false); paused = true; tv.setPaused(true); frozen = at(Date.now()); }
+(function frame() {
   const now = Date.now();
-  const at = fI != null ? { i: fI, t: fT ?? 0 } : paused ? pausedAt : locate(now);
-  tv.render(items[at.i], at.t, now, ctxFor(at.i));
+  const p = paused ? frozen : at(now);
+  tv.render(items[p.i], p.t, now, { mode, episode: "早间 · 10月9日", index: p.i, count: items.length, upcoming: up(p.i) });
   requestAnimationFrame(frame);
-}
-if (q.get("paused") === "1") { paused = true; pausedAt = { i: fI ?? 0, t: fT ?? 0 }; tv.setPaused(true); }
-if (q.get("on") === "1") tv.powerOn({ instant: true }).then(frame);
-else document.querySelector(".tv-power").addEventListener("click", () => requestAnimationFrame(frame), { once: true });
+})();
 </script>
 </body>
 </html>
