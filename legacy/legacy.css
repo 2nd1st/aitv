@@ -45,3 +45,15 @@ body{display:block}
 #player-status.playback-status{top:auto;right:auto;left:50%;bottom:16px;width:auto;white-space:nowrap}
 #player-retry{bottom:56px}
 #age-tag{display:none!important}
+
+/* 小屏（触屏音箱 533×320 这类）：画面按 1% 宽度缩放后底栏只有 7px 字，给一个能读的下限 */
+@media (max-width:800px){
+  .band{height:28px}
+  .band .prog{height:2px}
+  .band .tag{padding:0 10px 0 14px;font-size:11px;letter-spacing:.12em}
+  .band .track{font-size:11px}
+  .band .track span{padding:0 8px}
+  .band .track span::after{margin-left:16px}
+  .card{bottom:36px}
+  .golive{bottom:38px;font-size:11px}
+}
