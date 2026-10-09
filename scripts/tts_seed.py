@@ -3,7 +3,7 @@
   地址 /audio/<hash>.mp3，文件在 audio-cache/<hash>.mp3（+ <hash>.json 存分句时间轴）。
   同一份稿子、同一套音色已经合成过（本地缓存或 R2 里有）就不再调 TTS——给以后的定时任务省钱省时间。
 不碰线上版本；上线：scripts/release.mjs publish <version>（传 R2 + KV），再 use <version>（校验、可播 >= 15 条才切指针）。
-用法：node scripts/build-items.mjs 20 > /tmp/items.json && /workspace/podcast/.venv/bin/python scripts/tts_seed.py /tmp/items.json [version]
+用法：node scripts/build-items.mjs 20 > /tmp/items.json && python3 scripts/tts_seed.py /tmp/items.json [version]
 version 不给就用东八区当前时间，如 20261009-1130。
 进 seed 的字段走白名单（SEED_KEYS），原文（materialText 等）一律不写进去。
 需要环境变量 DOUBAO_TTS_ACCESS_TOKEN（豆包语音 API Key）。"""
@@ -18,7 +18,7 @@ VERSION = sys.argv[2] if len(sys.argv) > 2 else datetime.datetime.now(datetime.t
 assert re.fullmatch(r"\d{8}-\d{4,6}", VERSION), VERSION
 OUT = os.path.join(ROOT, "releases", VERSION)
 CACHE = os.path.join(ROOT, "audio-cache")
-BUCKET = "aitv-audio"
+BUCKET = os.environ.get("AITV_BUCKET", "aitv-audio")
 AUDIO_CONFIG = {"format": "mp3", "sample_rate": 24000, "speech_rate": 10}
 ANCHOR_MS = 1760000000000  # 固定锚点：所有设备按同一个时钟算位置
 

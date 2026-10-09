@@ -9,5 +9,11 @@
     "build": "rm -rf public/screen && cp -r screen public/screen",
     "deploy": "node scripts/deploy.mjs"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "license": "MIT",
+  "description": "AI 今天：持续更新的 AI 新闻台 | A live AI news channel",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joeseesun/aitv.git"
+  }
 }

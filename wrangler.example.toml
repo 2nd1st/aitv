@@ -1,0 +1,27 @@
+# Copy to wrangler.toml and configure your own Cloudflare resources before deployment.
+name = "my-aitv"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/audio/*", "/img/*"]
+
+[[kv_namespaces]]
+binding = "SCHEDULE"
+id = "YOUR_KV_NAMESPACE_ID"
+
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "my-aitv-audio"
+
+[vars]
+AUTO_PUBLISH = "0"
+RANKED_SOURCES = "producthunt,github"
+PIPELINE_MAX_NEW_PER_DAY = "0"
+TTS_DAILY_CAP = "0"
+
+# Enable only after configuring provider secrets and generation budgets.
+# [triggers]
+# crons = ["*/15 * * * *"]
