@@ -179,6 +179,7 @@ function goLive() {
 
 // 第一次点击里同步起播（保住手势）。screen-v4 叫 onListen，旧画面叫 onPower，两个都给。
 function listen() {
+  if (document.activeElement?.matches(".tv-power,.listen")) document.activeElement.blur();
   on = true;
   tv?.setMuted?.(false);
   for (const a of cache.values()) a.muted = false; // 已经静音在放的话，这一下就出声
