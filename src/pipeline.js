@@ -18,7 +18,7 @@ import { reserveTTS } from "./ttscap.js";
 import { storeScreenedImage } from "./imagepick.js";
 import { mp3Duration } from "./mp3.js";
 import { planTimeline, effective, locate } from "./timeline.js";
-import { timeOf, ageOf as ageBy, parseRanked, SOURCE_KEY, phListEnd, windowOf, isFresh, isFiller, ARTICLE_FRESH_MS, ARTICLE_FILLER_MS, RANKED_VALID_MS } from "./freshness.js";
+import { timeOf, newestFirst, ageOf as ageBy, parseRanked, SOURCE_KEY, phListEnd, windowOf, isFresh, isFiller, ARTICLE_FRESH_MS, ARTICLE_FILLER_MS, RANKED_VALID_MS } from "./freshness.js";
 
 export const STEPS = ["read", "brief", "script", "validate", "tts"];
 export const MAX_STEP_TRIES = 3; // 网络 / 模型这类临时错误：同一步最多跑 3 次（跨轮）
@@ -325,7 +325,8 @@ export async function runCron(d, { maxNewPerDay = 1, autoPublish = false, budget
       // 没有真实发布时间的（GitHub Trending）也跳过：上了也会在下一轮被下线（AIHOT 例外：读原文那步才拿日期）
       const noDate = (c) => timeOf(c, d.ranked).t == null && !c.dateUnknown;
       const stale = cands.filter((c) => isStale(c, now, d.ranked) || noDate(c));
-      const picks = cands.filter((c) => !stale.includes(c) && checkSafety(c).ok).slice(0, slots);
+      // 挑哪几条：按时间从新到旧（文章 publishedAt、榜单 rankedAt），免得 TechCrunch 这类量大的源把 PH / 厂商官方的挤掉
+      const picks = newestFirst(cands.filter((c) => !stale.includes(c) && checkSafety(c).ok), d.ranked).slice(0, slots);
       log.push(`抓到 ${r.items.length} 条，新候选 ${cands.length}，其中超过 6 小时 / 没有发布时间跳过 ${stale.length}${Object.keys(r.errors).length ? `，失败源 ${JSON.stringify(r.errors)}` : ""}`);
       idx.skipped = [...(idx.skipped || []), ...stale.map((c) => ({ id: c.id, why: noDate(c) ? "no-pubdate" : "stale", publishedAt: c.publishedAt, at: now }))].slice(-300);
       for (const pick of picks) {

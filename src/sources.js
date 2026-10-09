@@ -1,4 +1,4 @@
-// 抓榜模块（包打听）：HN、GitHub Trending、Product Hunt、AIHOT → 统一 item。
+// 抓榜模块（包打听）：HN、GitHub Trending、Product Hunt、AIHOT、OpenAI News / Google DeepMind 博客 / TechCrunch AI（RSS）→ 统一 item。
 // 只用 fetch 和字符串解析，Worker 和 Node 都能跑。数字原样保留在 fields 里，
 // 口播稿只能用 {{字段}} 引用这些数，validate.js 负责硬校验。
 //
@@ -13,6 +13,8 @@
 //   focus: "points",              // 数字卡读哪个字段；没有数字就不给
 //   fields: { title: "...", points: 812, comments: 233 }
 // }
+
+import { okDate, normUrl } from "./pubdate.js";
 
 const UA = "Mozilla/5.0 (aitv.qiaomu.ai; +https://aitv.qiaomu.ai)";
 
@@ -257,6 +259,157 @@ export function parseAIHOT(json, fetchedAt) {
   });
 }
 
+// ---------- 官方 RSS / 媒体 RSS（OpenAI News、Google DeepMind 博客、TechCrunch AI 频道）----------
+// 都是文章：publishedAt = RSS 的 <pubDate>（原样解析，读不出就整条跳过，不拿抓取时间顶替），走文章的 6 / 12 小时规则。
+// kindFixed: "news"：类型标签固定为新闻（官方博客、媒体报道都不是「产品 / 项目」，点评不许说「去试」），补料那步不让模型改。
+const RSS_MAX = 30; // 每个 feed 只看最新的 30 条（OpenAI 的 feed 有一千多条全量历史）
+const DESC_MAX = 240;
+const uncdata = (s) => String(s ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
+const numEnt = (s) => String(s)
+  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+  .replace(/&nbsp;/g, " ");
+// RSS 里的文字：去 CDATA、解实体、去 HTML 标签（转义过的 &lt;p&gt; 也去，所以 decode 两遍）
+export const rssText = (s) => decode(numEnt(decode(numEnt(uncdata(s)))));
+function shortDesc(s) {
+  const t = rssText(s);
+  if (t.length <= DESC_MAX) return t;
+  const cut = t.slice(0, DESC_MAX);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("。"));
+  return (end > 80 ? cut.slice(0, end + 1) : cut.replace(/\s+\S*$/, "") + "…").trim();
+}
+// 稳定的短 hash（cyrb53），id 用：同一个链接每轮都是同一个 id，跨轮去重
+export function shortHash(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+// RSS 2.0 的 <item>：{ title, url, description, publishedAt }。没有可解析的 pubDate 的跳过；按 pubDate 从新到旧，取前 RSS_MAX 条。
+export function parseRssEntries(xml, now = Date.now()) {
+  const out = [];
+  for (const m of String(xml).matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)) {
+    const b = m[1];
+    const pick = (tag) => (b.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i")) || [])[1];
+    const t = Date.parse(uncdata(pick("pubDate") || "").trim());
+    if (!okDate(t, now)) continue;
+    const url = uncdata(pick("link") || "").trim() || uncdata(pick("guid") || "").trim();
+    if (!/^https:\/\//.test(url)) continue;
+    const title = rssText(pick("title") || "");
+    if (!title) continue;
+    // categories：站点自己打的分类 / 标签（TechCrunch 的 AI 相关性检查要用）
+    const categories = [...b.matchAll(/<category\b[^>]*>([\s\S]*?)<\/category>/gi)].map((c) => rssText(c[1])).filter(Boolean);
+    out.push({ title, url, description: pick("description") ? shortDesc(pick("description")) : "", categories, publishedAt: t });
+  }
+  return out.sort((a, b) => b.publishedAt - a.publishedAt).slice(0, RSS_MAX);
+}
+
+function rssItems(prefix, source, xml, fetchedAt, extra = () => ({})) {
+  return parseRssEntries(xml, fetchedAt).map((e) => ({
+    ...item({ id: `${prefix}-${shortHash(normUrl(e.url) || e.url)}`, source, url: e.url, fetchedAt, publishedAt: e.publishedAt,
+      fields: { title: e.title, description: e.description, ...extra(e) } }),
+    kindFixed: "news",
+  }));
+}
+export const parseOpenAINews = (xml, fetchedAt) => rssItems("oai", "OpenAI", xml, fetchedAt);
+export const parseDeepMindBlog = (xml, fetchedAt) => rssItems("gdm", "Google DeepMind", xml, fetchedAt);
+
+// ---------- TechCrunch AI 频道：AI 相关性 + 融资新闻过滤（产品 2026-10-09 定）----------
+// 频道本身就是 AI 分类，这里再做一道轻量关键词检查（标题 + 简介 + TechCrunch 自己打的标签，不算频道那个光秃秃的「AI」），
+// 挡掉混进来的非 AI 稿（比如 Theranos 庭审文件网站那种只是挂在 AI 频道下的稿子）。
+const TC_AI = /\bA\.?I\b|artificial intelligence|machine learning|\bLLMs?\b|\bGPT|ChatGPT|Claude|Gemini|OpenAI|Anthropic|DeepMind|xAI|Grok|Mistral|Llama|Copilot|chatbot|neural|\bmodels?\b|\bagents?\b|agentic|Nvidia|\bGPUs?\b|robot|生成式|大模型|人工智能/i;
+// TechCrunch 自家活动（Disrupt 等）的售票 / 宣传稿：不是新闻
+const TC_PROMO = /TechCrunch (?:Disrupt|Sessions|All Stage|StrictlyVC)|\bRegister now\b|save up to \$|\byour pass\b/i;
+// 融资稿的判定（只看标题 + 简介的字面）
+export const FUNDING_RE = /\b(?:rais(?:e|es|ed|ing)|fund(?:ing|raise|raising)|Series [A-H]\b|valuation|valued at|seed (?:round|funding)|pre-seed|investment round|funding round|round led by)\b|融资|估值/i;
+// 前沿 / 基础模型公司白名单：这些公司的融资新闻不看金额，一律保留。名单写死在代码里，改要过产品。
+// 注意：Perplexity 不是模型公司（做的是搜索 / 应用），不在名单里，它的融资稿按金额规则走。
+export const MODEL_COMPANIES = [
+  ["OpenAI", /\bOpenAI\b/i], ["Anthropic", /\bAnthropic\b/i], ["xAI", /\bxAI\b/], ["Mistral", /\bMistral\b/i],
+  ["Google DeepMind", /\b(?:Google )?DeepMind\b/i], ["Meta AI", /\bMeta(?: AI| Superintelligence(?: Labs)?)?\b/], ["Cohere", /\bCohere\b/],
+  ["AI21", /\bAI21\b/i], ["Reka", /\bReka\b/], ["Moonshot", /\bMoonshot(?: AI)?\b|月之暗面/], ["Zhipu / Z.ai", /\bZhipu\b|\bZ\.ai\b|智谱/i],
+  ["MiniMax", /\bMiniMax\b/i], ["DeepSeek", /\bDeepSeek\b|深度求索/i], ["Qwen / Alibaba", /\bQwen\b|\bAlibaba\b|通义|阿里/i],
+  ["Thinking Machines", /\bThinking Machines(?: Lab)?\b/i], ["SSI / Safe Superintelligence", /\bSafe Superintelligence\b|\bSSI\b/],
+  ["Reflection AI", /\bReflection AI\b/i],
+];
+export const FUNDING_MIN_USD = 100_000_000;
+// 白名单公司必须是标题里「融资动词之前」的主语，而且前面没有 ex- / former / backed by 这类限定（「前 OpenAI 研究员创业融资」不算）
+export function modelCompanyOf(title) {
+  const t = String(title || "");
+  const k = t.search(FUNDING_RE);
+  const head = k > 0 ? t.slice(0, k) : "";
+  if (!head || /\b(?:ex-|former|alum\w*|backed by|founded by|veterans?)\b|前/i.test(head)) return null;
+  const hit = MODEL_COMPANIES.find(([, re]) => re.test(head));
+  return hit ? hit[0] : null;
+}
+// 从文字里按正则取美元金额（只认「$」开头的美元数；欧元、人民币等一律不认，不换算）。
+// 只认跟融资动作挨着的金额：「raised / raises / secures … $X」或「$X Series B / round / funding」；
+// 估值（$3.1B valuation、valued at $X）、营收等别的数一律不算。返回 { usd, exact } 的数组。
+const AMT = String.raw`(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(billion|million|thousand|bn|mn|[BMK])?\b`;
+const UNIT = { billion: 1e9, bn: 1e9, b: 1e9, million: 1e6, mn: 1e6, m: 1e6, thousand: 1e3, k: 1e3 };
+const QUAL = String.raw`(?:(over|more than|nearly|almost|about|around|roughly|up to|under|less than|close to|another|a|an|its|new|fresh|additional)\s+)*`;
+export function fundingAmounts(text) {
+  const s = String(text || "");
+  const out = [];
+  const num = (n, u) => Math.round(Number(String(n).replace(/,/g, "")) * (u ? UNIT[u.toLowerCase()] : 1));
+  const before = new RegExp(String.raw`\b(?:rais(?:e|es|ed|ing)|secur(?:e|es|ed|ing)|land(?:s|ed)?|clos(?:e|es|ed|ing)|bag(?:s|ged)?|nab(?:s|bed)?|pull(?:s|ed)? in|gets?|got|attract(?:s|ed)?)\s+${QUAL}${AMT}`, "gi");
+  const after = new RegExp(String.raw`${AMT}\s+(?:(?:[A-Za-z-]+)\s+){0,2}?(?:Series [A-H]\b|seed\b|pre-seed\b|round\b|funding\b|raise\b|investment\b)`, "gi");
+  for (const m of s.matchAll(before)) {
+    const tail = s.slice(m.index + m[0].length, m.index + m[0].length + 20);
+    if (/^\s*(?:valuation|in valuation|revenue)/i.test(tail)) continue;
+    const qual = (m[0].match(/\b(over|more than|nearly|almost|about|around|roughly|up to|under|less than|close to)\b/i) || [])[1];
+    out.push({ usd: num(m[m.length - 2], m[m.length - 1]), exact: !qual, qualifier: qual ? qual.toLowerCase() : null });
+  }
+  for (const m of s.matchAll(after)) {
+    const lead = s.slice(Math.max(0, m.index - 25), m.index);
+    if (/valu(?:ation|ed)\b[^$]*$/i.test(lead)) continue;
+    const q = (lead.match(/\b(over|more than|nearly|almost|about|around|roughly|up to|under|less than|close to)\s*$/i) || [])[1];
+    out.push({ usd: num(m[1], m[2]), exact: !q, qualifier: q ? q.toLowerCase() : null });
+  }
+  return out.filter((x) => Number.isFinite(x.usd) && x.usd > 0);
+}
+// 融资稿保留规则：① 白名单模型公司 → 留；② 否则标题 / 简介里能按上面的正则取到美元金额且 >= 1 亿美元 → 留；
+// 取不到美元金额（没写金额、只写了欧元等）或不到 1 亿 → 丢。「nearly / under / up to」这类说明实际不到这个数，按严格大于门槛算。
+// 金额永远只从原文字面按正则取，不让模型猜。
+export function techcrunchVerdict({ title, description, categories = [] }) {
+  const text = `${title}\n${description || ""}`;
+  const tags = categories.filter((c) => !/^AI$/i.test(c.trim())).join("\n");
+  if (TC_PROMO.test(text)) return { keep: false, why: "TechCrunch 活动宣传稿" };
+  if (!TC_AI.test(text) && !TC_AI.test(tags)) return { keep: false, why: "标题 / 简介里没有 AI 相关词" };
+  if (!FUNDING_RE.test(text)) return { keep: true, funding: false };
+  const company = modelCompanyOf(title);
+  const amounts = fundingAmounts(text);
+  const ok = (a) => (/^(nearly|almost|up to|under|less than|close to)$/.test(a.qualifier || "") ? a.usd > FUNDING_MIN_USD : a.usd >= FUNDING_MIN_USD);
+  const best = amounts.filter(ok).sort((a, b) => b.usd - a.usd)[0] || null;
+  const exact = best?.exact ? best.usd : null;
+  // 白名单公司：金额多少都留；有确数就带上（取最大的那个确数）
+  if (company) { const ex = amounts.filter((a) => a.exact).sort((a, b) => b.usd - a.usd)[0]; return { keep: true, funding: true, company, fundingUsd: ex ? ex.usd : null }; }
+  if (best) return { keep: true, funding: true, fundingUsd: exact };
+  if (!amounts.length) return { keep: false, why: "融资稿：标题 / 简介里没有美元金额" };
+  return { keep: false, why: `融资稿：金额 $${Math.max(...amounts.map((a) => a.usd)).toLocaleString("en-US")} 不到 1 亿美元，也不是模型公司` };
+}
+export function parseTechCrunchAI(xml, fetchedAt) {
+  const kept = [], dropped = [];
+  for (const e of parseRssEntries(xml, fetchedAt)) {
+    const v = techcrunchVerdict(e);
+    if (!v.keep) { dropped.push({ title: e.title, url: e.url, publishedAt: e.publishedAt, why: v.why }); continue; }
+    kept.push({
+      ...item({ id: `tc-${shortHash(normUrl(e.url) || e.url)}`, source: "TechCrunch", url: e.url, fetchedAt, publishedAt: e.publishedAt,
+        fields: {
+          title: e.title, description: e.description,
+          // fundingUsd：这篇融资报道的标题 / 简介里明文写的融资金额，单位美元（只认「$」金额，代码按正则取，不是模型估的）。
+          //   只在金额是确数时给（「over $500M」这类带修饰的不给数，条目照留）；估值、营收不算。
+          fundingUsd: v.fundingUsd ?? null,
+        } }),
+      kindFixed: "news",
+    });
+  }
+  Object.defineProperty(kept, "dropped", { value: dropped, enumerable: false });
+  return kept;
+}
+
 // ---------- 抓取 ----------
 
 export const SOURCES = {
@@ -265,6 +418,9 @@ export const SOURCES = {
   // 昨天（太平洋时间）已经结束的 PH 日榜；url 按抓取时间算
   producthunt: { url: (now) => phLeaderboardUrl(now), kind: "text", parse: (html, now) => parsePHLeaderboard(html, now) },
   aihot: { url: "https://aihot.news/api/v1/hot-topics", kind: "json", parse: parseAIHOT },
+  openai: { url: "https://openai.com/news/rss.xml", kind: "rss", parse: parseOpenAINews },
+  deepmind: { url: "https://deepmind.google/blog/rss.xml", kind: "rss", parse: parseDeepMindBlog },
+  techcrunch: { url: "https://techcrunch.com/category/artificial-intelligence/feed/", kind: "rss", parse: parseTechCrunchAI },
 };
 
 // AIHOT 的 links.original 是这条事件最早那篇报道（比如 9/28 的 Sonnet 5.5 发布页），
@@ -325,7 +481,7 @@ export async function fetchAll({ fetchImpl = fetch, now = Date.now(), timeoutMs 
         const res = await fetchWithRetry(
           fetchImpl,
           typeof s.url === "function" ? s.url(now) : s.url,
-          { headers: { "user-agent": UA, accept: s.kind === "json" ? "application/json" : "*/*" }, timeoutMs },
+          { headers: { "user-agent": UA, accept: s.kind === "json" ? "application/json" : s.kind === "rss" ? "application/rss+xml, application/xml, text/xml, */*" : "*/*" }, timeoutMs },
           { waits: retryWaits, sleep }
         );
         const body = s.kind === "json" ? await res.json() : await res.text();
@@ -354,7 +510,7 @@ export function dedupe(items, seen = new Set()) {
   return out;
 }
 
-// 四个源轮流排，避免一个台连着播十条 GitHub。
+// 各个源轮流排，避免一个台连着播十条 GitHub。
 export function interleave(items) {
   const by = new Map();
   for (const it of items) (by.get(it.source) || by.set(it.source, []).get(it.source)).push(it);

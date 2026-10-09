@@ -7,6 +7,7 @@
 // 2026-10-09 实测：openai.com 从 box 抓页面 403，从 Worker 抓 200 且页面 <time> 能读到日期；RSS 从两边都是 200。
 export const RSS_FEEDS = {
   "openai.com": "https://openai.com/news/rss.xml",
+  "deepmind.google": "https://deepmind.google/blog/rss.xml",
   // 其他厂商加在这里：域名（不带 www）→ 官方 RSS 地址
 };
 const UA = "Mozilla/5.0 (aitv.qiaomu.ai; +https://aitv.qiaomu.ai)";

@@ -181,13 +181,15 @@ export function titleZhOk(title, zh) {
   if (!/[\u3400-\u9fff]/.test(zh)) return false;
   return JSON.stringify(numTokens(title)) === JSON.stringify(numTokens(zh));
 }
+// 要配中文标题的来源：标题是整句英文新闻标题的（GitHub / PH 的标题是名字，不翻）
+export const TITLE_ZH_SOURCES = new Set(["Hacker News", "OpenAI", "Google DeepMind", "TechCrunch"]);
 export function needsTitleZh(item) {
   const t = item.fields?.title || "";
-  return item.source === "Hacker News" && !/[\u3400-\u9fff]/.test(t);
+  return TITLE_ZH_SOURCES.has(item.source) && !/[\u3400-\u9fff]/.test(t);
 }
 export async function translateTitle(item, { llm }) {
   const title = item.fields.title;
-  const prompt = `把这条 Hacker News 标题翻成简洁自然的中文标题（不超过三十个字），产品名、人名、专有名词保留英文；原标题里的数字原样保留，不许增删或改写数字。
+  const prompt = `把这条 ${item.source} 标题翻成简洁自然的中文标题（不超过三十个字），产品名、人名、专有名词保留英文；原标题里的数字原样保留，不许增删或改写数字。
 原标题：${title}
 ${item.brief?.what ? `参考（它讲的是什么）：${item.brief.what}` : ""}
 只输出 JSON：{"title_zh":"…"}`;

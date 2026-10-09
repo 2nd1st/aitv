@@ -31,6 +31,9 @@ export const UNITS = {
   // Product Hunt（同一页 Post.launchDayScore）：PH 自己算的上榜当天综合分（投票、讨论、活跃度加权），不是票数，不许说成「票」。
   //   只能念成「综合分 N 分」（before 强制），不许说「票」（writer.js checkScript 对 PH 稿子全文拦「票」）。
   phScore: { before: "综合分 ", after: " 分" },
+  // TechCrunch AI 频道融资稿（sources.js parseTechCrunchAI）：这篇报道的标题 / 简介里明文写的这一轮融资金额，单位美元（只认「$」金额）。
+  //   代码按正则从原文字面取，不是模型估的；只在是确数时给（「over $500M」这类不给）；估值、营收不算。只能念成「融资 N 美元」。
+  fundingUsd: { before: "融资 ", after: " 美元" },
 };
 export const TEXT_FIELDS = new Set(["title", "description", "language", "tagline", "origin", "what", "who", "highlight", "title_zh", "name", "limit"]);
 

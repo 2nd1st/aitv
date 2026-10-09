@@ -24,7 +24,7 @@ function deps(hits) {
     fetch: async (url) => {
       url = String(url);
       if (url.includes("hn.algolia.com")) return new Response(JSON.stringify({ hits }));
-      if (/github\.com\/trending|producthunt|aihot/.test(url)) return new Response("nope", { status: 404 });
+      if (/github\.com\/trending|producthunt|aihot|openai\.com\/news\/rss|deepmind\.google\/blog\/rss|techcrunch\.com\/category/.test(url)) return new Response("nope", { status: 404 });
       calls.other.push(url); return new Response("nope", { status: 404 });
     },
     briefLLM: async () => { calls.brief++; throw new Error("不该调"); },

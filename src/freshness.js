@@ -41,6 +41,12 @@ export function timeOf(it, ranked = DEFAULT_SET) {
   return it?.publishedAt == null ? { t: null, kind: "unknown" } : { t: it.publishedAt, kind: "published" };
 }
 export const ageOf = (it, now, ranked) => { const { t } = timeOf(it, ranked); return t == null ? Infinity : now - t; };
+// 候选排序（每轮挑新条目时用）：按时间从新到旧——文章按 publishedAt，榜单类按 rankedAt（同 timeOf）。
+// AIHOT 读原文前没有发布时间：只拿它的 aihotLatestAt（AIHOT 上最后活跃时间）排先后，不拿它判新鲜。都没有的排最后。同一时间保持原顺序。
+export const sortTimeOf = (it, ranked = DEFAULT_SET) => timeOf(it, ranked).t ?? it?.aihotLatestAt ?? -Infinity;
+export function newestFirst(items, ranked = DEFAULT_SET) {
+  return items.map((it, i) => ({ it, i, t: sortTimeOf(it, ranked) })).sort((a, b) => b.t - a.t || a.i - b.i).map((x) => x.it);
+}
 // 节目单对外：每条带 publishedAt、dateKind，榜单类再带 rankedAt
 export function annotate(it, ranked = DEFAULT_SET) {
   const { t, kind } = timeOf(it, ranked);

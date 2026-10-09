@@ -8,7 +8,7 @@ const fx = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), "utf
 const T = 1760000000000;
 
 function shape(it) {
-  assert.match(it.id, /^(hn|gh|ph|aihot)-\S+$/);
+  assert.match(it.id, /^(hn|gh|ph|aihot|oai|gdm|tc)-\S+$/);
   assert.match(it.url, /^https:\/\//);
   assert.equal(it.fetchedAt, T);
   assert.ok(it.fields.title, "要有标题");
@@ -65,7 +65,8 @@ test("一个源挂了，别的源照常出", async () => {
     if (url.includes("github.com")) return new Response(fx("gh-trending.html"));
     return new Response(fx("aihot.json"));
   };
-  const r = await fetchAll({ fetchImpl: fake, now: T, sleep: async () => {} }); // 503 会重试两次，测试里不真等
+  // RSS 三个源另有测试（test/rss-sources.test.js）；这里只看原来四个
+  const r = await fetchAll({ fetchImpl: fake, now: T, sleep: async () => {}, only: ["hn", "github", "producthunt", "aihot"] }); // 503 会重试两次，测试里不真等
   assert.match(r.errors.producthunt, /503/);
   assert.equal(Object.keys(r.errors).length, 1);
   assert.ok(r.items.length >= 9);
