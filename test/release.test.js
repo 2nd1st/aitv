@@ -59,16 +59,34 @@ test("音频地址：内容寻址和旧的按版本目录都认，别的版本�
   assert.ok(!audioPathOk("/seeds/20261009-1200/audio/hn-1.mp3", "20261009-1200"));
 });
 
-import { applyTakedown, addTakedown, removeTakedown, isVoid, markVoid, planRollback } from "../src/release.js";
+import { applyTakedown, addTakedown, removeTakedown, migrateTakedown, takedownMatches, isVoid, markVoid, planRollback } from "../src/release.js";
+import { scriptHash } from "../src/scripthash.js";
 import { readFileSync } from "node:fs";
 
-test("下架：按 id 或音频地址过滤；增删名单", () => {
-  const items = [{ id: "a", audio: "/audio/1.mp3" }, { id: "b", audio: "/audio/2.mp3" }, { id: "c", audio: "/audio/3.mp3" }];
-  let td = addTakedown(null, "b", ["/audio/2.mp3"]);
-  assert.deepEqual(applyTakedown(items, td).map((i) => i.id), ["a", "c"]);
-  assert.deepEqual(applyTakedown([{ id: "b-renamed", audio: "/audio/2.mp3" }], td), []);
-  td = removeTakedown(td, "b", ["/audio/2.mp3"]);
-  assert.equal(applyTakedown(items, td).length, 3);
+test("下架按稿子 hash：旧稿子被拦，同一个 id 换了新稿子照常播；旧版地址照样拦", () => {
+  const items = [{ id: "a", audio: "/audio/aaaaaaaaaaaaaaaa.mp3" }, { id: "b", audio: "/audio/bbbbbbbbbbbbbbbb.mp3" }, { id: "c", audio: "/audio/20261009-1133/c.mp3" }];
+  let td = addTakedown(null, { hash: "bbbbbbbbbbbbbbbb", id: "b" });
+  td = addTakedown(td, { audio: "/audio/20261009-1133/c.mp3", id: "c" });
+  assert.deepEqual(applyTakedown(items, td).map((i) => i.id), ["a"]);
+  assert.equal(td.refs.bbbbbbbbbbbbbbbb, "b");
+  // 同一个 id，改写后的新稿子（新 hash）照常播
+  assert.deepEqual(applyTakedown([{ id: "b", audio: "/audio/cccccccccccccccc.mp3" }], td).length, 1);
+  // 别的 id 用了同一版稿子（同 hash）照样拦
+  assert.deepEqual(applyTakedown([{ id: "b-renamed", audio: "/audio/bbbbbbbbbbbbbbbb.mp3" }], td), []);
+  td = removeTakedown(td, { hash: "bbbbbbbbbbbbbbbb" });
+  assert.equal(applyTakedown(items, td).length, 2);
+  assert.throws(() => addTakedown(null, { hash: "AnyPS5" }));
+});
+
+test("旧格式（按 id）迁移成按 hash：id 不再拦", () => {
+  const old = { ids: ["gh-boykopovar/AnyPS5"], audio: ["/audio/20261009-1057/gh-boykopovar-AnyPS5.mp3", "/audio/37075b5af4251b3e.mp3"] };
+  const t = migrateTakedown(old);
+  assert.deepEqual(t.hashes, ["37075b5af4251b3e"]);
+  assert.deepEqual(t.audio, ["/audio/20261009-1057/gh-boykopovar-AnyPS5.mp3"]);
+  assert.equal(t.refs["37075b5af4251b3e"], "gh-boykopovar/AnyPS5");
+  assert.ok(!("ids" in t));
+  assert.equal(takedownMatches(old, { id: "gh-boykopovar/AnyPS5", audio: "/audio/1111111111111111.mp3" }), false);
+  assert.equal(takedownMatches(old, { id: "x", audio: "/audio/37075b5af4251b3e.mp3" }), true);
 });
 
 test("作废：use / rollback 都不切到作废版本；回滚计划 dry-run", () => {
@@ -85,7 +103,7 @@ test("模拟：即使指针被切回 20261009-1159，/api/schedule 也不播 Any
   const id = "gh-boykopovar/AnyPS5";
   const any = seed.items.find((i) => i.id === id);
   assert.ok(any, "1159 里确实有 AnyPS5");
-  const kv = new Map([["pointer", { version: "20261009-1159" }], ["seed:20261009-1159", seed], ["takedown", addTakedown(null, id, [any.audio])]]);
+  const kv = new Map([["pointer", { version: "20261009-1159" }], ["seed:20261009-1159", seed], ["takedown", addTakedown(null, { audio: any.audio, id })]]);
   const env = { SCHEDULE: { get: async (k) => kv.get(k) ?? null } };
   const body = await (await worker.fetch(new Request("https://x/api/schedule"), env)).json();
   assert.equal(body.version, "20261009-1159");
@@ -96,4 +114,16 @@ test("模拟：即使指针被切回 20261009-1159，/api/schedule 也不播 Any
   assert.equal(body.total, t - body.anchor);
   const full = seed.items.reduce((a, i) => a + Math.round(i.duration * 1000), 0);
   assert.equal(body.total, full - Math.round(any.duration * 1000));
+});
+
+test("稿子 hash 跟音频文件名（Python audio_key）一致；AnyPS5 改写后的新稿子同 id 可以回来", async () => {
+  const seed = JSON.parse(readFileSync(new URL("../releases/20261009-1159/seed.json", import.meta.url)));
+  for (const it of seed.items) assert.equal(`/audio/${await scriptHash(it.script.map((p) => p.text))}.mp3`, it.audio, it.id);
+  const any = seed.items.find((i) => i.id === "gh-boykopovar/AnyPS5");
+  const td = migrateTakedown({ ids: [any.id], audio: [any.audio] });
+  const rewritten = [any.script[0].text, any.script[1].text, "这条只做报道，不建议去试。"];
+  const h2 = await scriptHash(rewritten);
+  assert.notEqual(`/audio/${h2}.mp3`, any.audio);
+  assert.equal(applyTakedown([{ ...any }], td).length, 0);
+  assert.equal(applyTakedown([{ ...any, audio: `/audio/${h2}.mp3` }], td).length, 1);
 });

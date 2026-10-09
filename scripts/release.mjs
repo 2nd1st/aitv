@@ -4,14 +4,16 @@
 //   node scripts/release.mjs publish <version>  校验 → R2 里还没有的音频才上传（<hash>.mp3 + <hash>.json 时间轴）→ seed 写 KV（seed:<version>）。不切换。
 //   node scripts/release.mjs use <version>      校验 + 逐条 HEAD 线上 /audio/<version>/… 确认能播，可播 >= 15 条才把 KV 指针切过去
 //   node scripts/release.mjs rollback [--dry-run]  KV 指针切回 previous（不用重新部署）；previous 已作废就拒绝
-//   node scripts/release.mjs takedown <id>      下架：id（和它在各版本里的音频地址）进 KV "takedown"，/api/schedule 立刻按它过滤；
-//                                               含这条的版本自动标成作废（pointer.void），use / rollback 都不会再切过去
-//   node scripts/release.mjs untakedown <id>    撤销下架（不撤销作废，作废版本要人工判断）
+//   node scripts/release.mjs takedown <id|hash> 下架「这一版稿子」：id 在线上版本里解析成稿子 hash（=音频文件名），hash 进 KV "takedown"
+//                                               （id 只记作参考）；/api/schedule 按 hash 过滤，同一个 id 换了新稿子照常播。
+//                                               含这版稿子的版本自动标成作废（pointer.void），use / rollback 都不会再切过去
+//   node scripts/release.mjs untakedown <id|hash> 撤销下架（不撤销作废，作废版本要人工判断）
+//   node scripts/release.mjs takedown-migrate   把旧格式（按 id）的下架名单迁成按稿子 hash
 import { readFileSync, existsSync, statSync, readdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkSeed, MIN_PLAYABLE, addTakedown, removeTakedown, isVoid, markVoid, planRollback, takedownMatches } from "../src/release.js";
+import { checkSeed, MIN_PLAYABLE, addTakedown, removeTakedown, migrateTakedown, scriptHashOf, isVoid, markVoid, planRollback, takedownMatches } from "../src/release.js";
 import { gitGuard } from "./guard.mjs";
 
 const ROOT = new URL("../releases/", import.meta.url);
@@ -93,28 +95,49 @@ if (cmd === "list") {
   if (process.argv.includes("--dry-run")) { console.log(`（dry-run）会回滚：${ptr.version} → ${plan.to}`); process.exit(0); }
   kvPutJson("pointer", { ...ptr, version: plan.to, previous: ptr.version, commit: ptr.previousCommit || null, previousCommit: ptr.commit || null, switchedAt: new Date().toISOString(), rolledBack: true });
   console.log(`已回滚：${ptr.version} → ${plan.to}。KV 全球生效约一分钟，不用重新部署。`);
-} else if (cmd === "takedown" || cmd === "untakedown") {
-  if (!v) { console.log(`用法：node scripts/release.mjs ${cmd} <条目 id>`); process.exit(2); }
-  // 本地各版本里这条的音频地址一起记上（同一条换了 id 也能按音频拦住）
-  const hits = [];
-  for (const d of localVersions()) for (const it of readSeed(d).items) if (it.id === v) hits.push({ version: d, audio: it.audio });
-  const audios = [...new Set(hits.map((h) => h.audio).filter(Boolean))];
-  const td = kvGet("takedown") || { ids: [], audio: [] };
-  if (cmd === "untakedown") {
-    kvPutJson("takedown", removeTakedown(td, v, audios));
-    console.log(`已撤销下架 ${v}（作废的版本保持作废）`); process.exit(0);
-  }
-  const next = addTakedown(td, v, audios);
+} else if (cmd === "takedown-migrate") {
+  const td = kvGet("takedown");
+  const next = { ...migrateTakedown(td), updatedAt: new Date().toISOString(), migratedFrom: td?.ids ? "ids" : undefined };
   kvPutJson("takedown", next);
-  // 含这条的版本全部作废：本地 releases/ 和 KV 里线上 / 上一版的 seed 都查
+  console.log(`下架名单已迁移：hash ${next.hashes.join(", ") || "无"}；旧地址 ${next.audio.length} 个`);
+} else if (cmd === "takedown" || cmd === "untakedown") {
+  if (!v) { console.log(`用法：node scripts/release.mjs ${cmd} <条目 id | 稿子 hash>`); process.exit(2); }
   const ptr = kvGet("pointer") || {};
-  const affected = new Set(hits.map((h) => h.version));
-  for (const x of [ptr.version, ptr.previous].filter(Boolean)) {
-    const seed = kvGet(`seed:${x}`);
-    if (seed?.items?.some((it) => takedownMatches(next, it))) affected.add(x);
+  const td = kvGet("takedown");
+  const isHashArg = /^[0-9a-f]{16}$/.test(v);
+  if (cmd === "untakedown") {
+    const t = migrateTakedown(td);
+    const keys = isHashArg ? [v] : Object.entries(t.refs).filter(([, id]) => id === v).map(([k]) => k);
+    if (!keys.length) { console.log(`下架名单里没有 ${v}`); process.exit(1); }
+    let next = t;
+    for (const k of keys) next = removeTakedown(next, /^[0-9a-f]{16}$/.test(k) ? { hash: k } : { audio: k });
+    kvPutJson("takedown", next);
+    console.log(`已撤销下架：${keys.join(", ")}（作废的版本保持作废）`); process.exit(0);
   }
-  if (affected.size) kvPutJson("pointer", markVoid(ptr, [...affected], `含已下架条目 ${v}`));
-  console.log(`已下架 ${v}（音频 ${audios.join(", ") || "无"}）；作废版本：${[...affected].join(", ") || "无"}。/api/schedule 约半分钟到一分钟内生效。`);
+  // 解析成「线上版本里这条现在的稿子」
+  let entry;
+  if (isHashArg) entry = { hash: v };
+  else {
+    const live = kvGet(`seed:${ptr.version}`);
+    const it = live?.items?.find((x) => x.id === v);
+    if (!it) {
+      const seen = [];
+      for (const d of localVersions()) for (const x of readSeed(d).items) if (x.id === v) seen.push(`${d}: ${scriptHashOf(x) || x.audio}`);
+      console.log(`线上版本 ${ptr.version} 里没有 ${v}。要下架某一版稿子请直接给 hash：\n  ${seen.join("\n  ") || "（本地版本里也没有）"}`);
+      process.exit(1);
+    }
+    const h = scriptHashOf(it);
+    entry = h ? { hash: h, id: v } : { audio: it.audio, id: v };
+  }
+  const next = addTakedown(td, entry);
+  kvPutJson("takedown", next);
+  // 含这版稿子的版本全部作废：本地 releases/ 和 KV 里线上 / 上一版的 seed 都查
+  const only = addTakedown(null, entry);
+  const affected = new Set();
+  for (const d of localVersions()) if (readSeed(d).items.some((it) => takedownMatches(only, it))) affected.add(d);
+  for (const x of [ptr.version, ptr.previous].filter(Boolean)) if (kvGet(`seed:${x}`)?.items?.some((it) => takedownMatches(only, it))) affected.add(x);
+  if (affected.size) kvPutJson("pointer", markVoid(kvGet("pointer") || ptr, [...affected], `含已下架稿子 ${entry.hash || entry.audio}${entry.id ? `（${entry.id}）` : ""}`));
+  console.log(`已下架稿子 ${entry.hash || entry.audio}${entry.id ? `（${entry.id}）` : ""}；作废版本：${[...affected].join(", ") || "无"}。/api/schedule 约半分钟到一分钟内生效。`);
 } else {
-  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id> | untakedown <id>"); process.exit(2);
+  console.log("用法：node scripts/release.mjs list | check <v> | publish <v> | use <v> | rollback [--dry-run] | takedown <id|hash> | untakedown <id|hash> | takedown-migrate"); process.exit(2);
 }

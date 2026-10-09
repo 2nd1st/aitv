@@ -49,23 +49,47 @@ export function checkSeed(seed, version, { audioBytes, minPlayable = MIN_PLAYABL
 }
 
 // ---------- 下架（takedown）与作废（void） ----------
-// KV "takedown" = { ids: [条目 id], audio: [音频地址], updatedAt }。/api/schedule 每次读都按它过滤，
-// 并重新连续排开始时间（无空档，总长变短）——所以不管哪个版本在线上（包括回滚到的旧版），被下架的条目都不会播。
+// 下架的是「某一版口播稿」，不是条目 id（乔布斯：同一条改写成合适的稿子以后可以重新上）。
+// KV "takedown" = { hashes: [稿子 hash], audio: [旧版按版本目录的音频地址], refs: { <hash 或地址>: 条目 id（仅供查阅）}, updatedAt }
+// 稿子 hash 跟音频文件名同一个依据（src/scripthash.js：sha256(音色 + 参数 + 稿子) 前 16 位），所以内容寻址的音频地址里就带着它；
+// 早期两个版本的音频不是内容寻址，按音频地址拦（地址本身也是一版稿子一个）。
+// /api/schedule 每次读都按它过滤并连续重排；同一个 id 换了新稿子（hash 变了）照常播。
+export const scriptHashOf = (it) => (/^\/audio\/([0-9a-f]{16})\.mp3$/.exec(String(it?.audio || "")) || [])[1] || null;
+const HASH_RE = /^[0-9a-f]{16}$/;
+
+// 旧格式 { ids, audio } → 新格式：id 不再用来拦；内容寻址的音频地址转成 hash，其余地址照旧
+export function migrateTakedown(td) {
+  if (!td) return { hashes: [], audio: [], refs: {} };
+  const hashes = new Set(td.hashes || []), audio = new Set(), refs = { ...(td.refs || {}) };
+  const oldId = Array.isArray(td.ids) && td.ids.length === 1 ? td.ids[0] : null;
+  for (const a of td.audio || []) {
+    const h = scriptHashOf({ audio: a });
+    if (h) { hashes.add(h); if (oldId && !refs[h]) refs[h] = oldId; }
+    else { audio.add(a); if (oldId && !refs[a]) refs[a] = oldId; }
+  }
+  return { hashes: [...hashes], audio: [...audio], refs, ...(td.updatedAt ? { updatedAt: td.updatedAt } : {}) };
+}
 export function takedownMatches(td, it) {
   if (!td || !it) return false;
-  return (Array.isArray(td.ids) && td.ids.includes(it.id)) || (Array.isArray(td.audio) && !!it.audio && td.audio.includes(it.audio));
+  const t = td.ids ? migrateTakedown(td) : td;
+  const h = scriptHashOf(it);
+  return (!!h && (t.hashes || []).includes(h)) || (!!it.audio && (t.audio || []).includes(it.audio));
 }
 export function applyTakedown(items, td) {
   return (items || []).filter((it) => !takedownMatches(td, it));
 }
-export function addTakedown(td, id, audios = []) {
-  const ids = new Set(td?.ids || []), audio = new Set(td?.audio || []);
-  ids.add(id); for (const a of audios) if (a) audio.add(a);
-  return { ids: [...ids], audio: [...audio], updatedAt: new Date().toISOString() };
+// entry：{ hash } 或 { audio }（旧版地址），id 只记在 refs 里
+export function addTakedown(td, { hash, audio, id } = {}) {
+  const t = migrateTakedown(td);
+  const hashes = new Set(t.hashes), aud = new Set(t.audio), refs = { ...t.refs };
+  if (hash) { if (!HASH_RE.test(hash)) throw new Error(`不是稿子 hash：${hash}`); hashes.add(hash); if (id) refs[hash] = id; }
+  if (audio) { const h = scriptHashOf({ audio }); if (h) { hashes.add(h); if (id) refs[h] = id; } else { aud.add(audio); if (id) refs[audio] = id; } }
+  return { hashes: [...hashes], audio: [...aud], refs, updatedAt: new Date().toISOString() };
 }
-export function removeTakedown(td, id, audios = []) {
-  const drop = new Set(audios);
-  return { ids: (td?.ids || []).filter((x) => x !== id), audio: (td?.audio || []).filter((a) => !drop.has(a)), updatedAt: new Date().toISOString() };
+export function removeTakedown(td, { hash, audio } = {}) {
+  const t = migrateTakedown(td);
+  const refs = { ...t.refs }; delete refs[hash]; delete refs[audio];
+  return { hashes: t.hashes.filter((x) => x !== hash), audio: t.audio.filter((a) => a !== audio), refs, updatedAt: new Date().toISOString() };
 }
 // 作废的版本记在指针元数据 pointer.void 里：use / rollback 都拒绝切到作废版本（第二道保险）。
 export const isVoid = (ptr, v) => Array.isArray(ptr?.void) && ptr.void.includes(v);

@@ -45,11 +45,11 @@ cd /workspace/aitv-main && source /home/box/.cf_aitv.env && npm run deploy
   cd /workspace/aitv && source /home/box/.cf_aitv.env && node scripts/release.mjs rollback
   ```
   代码出问题（而不是节目单）时回到上一次 Worker 部署：`source /home/box/.cf_aitv.env && npx wrangler rollback`。
-- **下架**（某一条不能播，立刻生效，不管线上是哪个版本、包括回滚到的旧版）：
+- **下架**（某一版稿子不能播，立刻生效，不管线上是哪个版本、包括回滚到的旧版）：
   ```sh
-  cd /workspace/aitv-main && source /home/box/.cf_aitv.env && node scripts/release.mjs takedown <条目 id>
+  cd /workspace/aitv-main && source /home/box/.cf_aitv.env && node scripts/release.mjs takedown <条目 id 或稿子 hash>
   ```
-  id 和它在各版本里的音频地址写进 KV `takedown`；`/api/schedule` 每次读都过滤掉，并重新连续排开始时间（无空档，总长变短）。KV 边缘缓存 30 秒，接口本身 `no-store`，约半分钟到一分钟内全球生效。含这条的版本自动在指针元数据里标成作废（`pointer.void`），`use` / `rollback` 都拒绝切过去（第二道保险）。撤销：`untakedown <id>`（不撤销作废）。回滚前可以 `rollback --dry-run` 看会切到哪儿。
+  下架的是**稿子**，不是条目 id：id 会在线上版本里解析成这条现在的稿子 hash（`src/scripthash.js`，跟音频文件名同一个依据：sha256(音色 + 合成参数 + 稿子) 前 16 位），hash 写进 KV `takedown`（id 只记在 `refs` 里备查）。`/api/schedule` 每次读都按 hash 过滤并重新连续排时间；**同一个 id 改写成新稿子（hash 变了）照常播**，流水线也不会因为 id 曾被下架就跳过它。早期两个版本的音频不是内容寻址，按音频地址拦。KV 边缘缓存 30 秒，接口 `no-store`。含这版稿子的版本自动在指针元数据里标成作废（`pointer.void`），`use` / `rollback` 都拒绝切过去。撤销：`untakedown <id 或 hash>`（不撤销作废）。回滚前可以 `rollback --dry-run`。
 - 其他：`node scripts/release.mjs list`（本地版本 + 线上指针）、`check <版本号>`（只校验本地）。
 - `public/app.js` 播放器：标题/来源点开原文（新标签页）；点画面暂停、再点从暂停处继续；暂停或落后直播时显示「回到直播」，按服务器时钟重新定位；字幕显示正在念的那段。进来/回到直播时等音频 `loadedmetadata`（再在 `canplay` 校一次）按那一刻的服务器时间设 `currentTime`；播放中偏差超过 0.25 秒且缓冲够了才拉回；每分钟重新校时。
 - `screen/`：画面，艾维负责，只暴露 `render(item, t)`。

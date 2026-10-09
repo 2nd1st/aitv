@@ -9,7 +9,7 @@ export const COMMIT = typeof BUILD_COMMIT !== "undefined" ? BUILD_COMMIT : "dev"
 
 // 节目单来源：KV（namespace SCHEDULE）
 //   "pointer"         → { version, previous, commit, switchedAt }   线上指针，切换 / 回滚只改这一个 key
-//   "takedown"        → { ids, audio }  下架名单：每次读节目单都过滤掉，并重新连续排时间（任何版本都不会播）
+//   "takedown"        → { hashes, audio, refs }  下架名单（按稿子 hash，不按 id）：每次读节目单都过滤掉，并重新连续排时间
 //   "seed:<version>"  → 该版本的 seed.json（音频在 R2：<hash>.mp3，对外 /audio/<hash>.mp3；配图在 R2 img/<key>，对外 /img/<key>）
 // KV 边缘缓存最短 30 秒：下架 / 切换最晚约半分钟到一分钟内全球生效；/api/schedule 本身 no-store。
 const KV_TTL = { cacheTtl: 30, type: "json" };
