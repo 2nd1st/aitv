@@ -11,7 +11,7 @@
 //   node scripts/release.mjs takedown <id|hash> --now  紧急下架：立刻生效，正在播的那条也切掉
 //   node scripts/release.mjs timeline           看 KV 里的时间线（current / next / switchAt）
 //   node scripts/release.mjs timeline-init      按线上指针 + 下架名单把「此刻实际在播的」写成时间线（不改变任何人的播放位置）
-//   切版本 / 回滚 / 下架都不立刻换：写时间线 { current, next, switchAt }，switchAt = 「现在 + 90 秒」之后的第一个条目边界
+//   切版本 / 回滚 / 下架都不立刻换：写时间线 { current, next, switchAt }，switchAt = 「现在 + 150 秒」之后的第一个条目边界
 //   node scripts/release.mjs takedown-migrate   把旧格式（按 id）的下架名单迁成按稿子 hash
 import { readFileSync, existsSync, statSync, readdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";

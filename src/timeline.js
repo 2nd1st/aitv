@@ -1,6 +1,6 @@
 // 时间线（迪恩的全局时钟安全）：KV "timeline" = { current: sched, next: sched|null, switchAt: ms|null }。
 // - 每次换节目单（切版本、下架重排、定时任务插新条、超过 6 小时的条目下线）都算一个 switchAt：
-//   「现在 + 90 秒」之后的第一个条目边界。到 switchAt 之前服务器继续给旧时间线（同时带上 next），
+//   「现在 + 150 秒」之后的第一个条目边界。到 switchAt 之前服务器继续给旧时间线（同时带上 next），
 //   客户端每 60 秒拉一次，一定能在 switchAt 之前拿到 next，到点按同一个时钟一起换，谁都不会在一条中间被切。
 // - 紧急下架（--now）：立刻换，哪怕切断正在播的那条。
 // - 续播：新时间线从「switchAt 那一刻本该开始的那条」接着排（被删的跳过），定时任务的新条目插在它前面
@@ -9,7 +9,7 @@ import { locate, pick, nextBoundary } from "../public/timeline.js";
 import { buildSchedule } from "./schedule.js";
 export { locate, pick, nextBoundary };
 
-export const LEAD_MS = 90_000;
+export const LEAD_MS = 150_000; // 乔布斯 / 迪恩 2026-10-09 批：90 → 150 秒（KV 传播约 60 秒 + 客户端 60 秒轮询，留足余量）
 export const MAX_AGE_MS = 6 * 3600_000;
 const keyOf = (it) => `${it.id}|${it.audio}`;
 

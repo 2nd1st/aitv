@@ -36,24 +36,40 @@ setInterval(async () => {
   try { const c = await syncClock(); if (c.rtt < 1500) clock = c; } catch {}
   try {
     const r = await fetch("/api/schedule", { cache: "no-store" });
-    if (r.ok) state = adopt(await r.json());
+    if (r.ok) { state = adopt(await r.json()); primeNext(); }
   } catch {}
 }, 60000);
 
 let on = false, playing = null; // playing: { id, audio }
+const switchLog = []; // 每次换条：什么时候开始换、什么时候真的出声（playing 事件），用来量切换有没有卡
 
 // 预取：当前和下一条的音频。按音频地址缓存（不同版本同 id 不会串）
 const cache = new Map();
+let primed = null; // { audio, url, t }：switchAt 之后第一条，next 一到就预加载好，切换时不卡
 function audioFor(item) {
   if (!cache.has(item.audio)) {
     const a = new Audio(item.audio); a.preload = "auto"; cache.set(item.audio, a);
-    if (cache.size > 4) {
-      const [k, old] = cache.entries().next().value;
-      if (old !== playing?.audio) cache.delete(k);
+    if (cache.size > 5) {
+      for (const [k, old] of cache) {
+        if (old !== playing?.audio && old !== primed?.audio) { cache.delete(k); break; }
+      }
     }
   }
   return cache.get(item.audio);
 }
+// 拿到 next 就预加载 switchAt 那一刻要播的那条；切换点落在文件中间（比如紧急切换）就先 seek 到对应位置
+function primeNext() {
+  if (!state.next || state.switchAt == null) { primed = null; return; }
+  const { i, t } = locate(state.next, state.switchAt);
+  const it = state.next.items[i];
+  if (!it || primed?.url === it.audio) return;
+  const a = audioFor(it);
+  primed = { audio: a, url: it.audio, t };
+  const seek = () => { if (a !== playing?.audio && t > 0.05) a.currentTime = t; };
+  if (a.readyState >= 1) seek(); else a.addEventListener("loadedmetadata", seek, { once: true });
+
+}
+primeNext();
 // 从时刻 ms 起往后数 k 条（跨 switchAt 时自动换成 next 的条目）
 function walk(ms, k) {
   const out = [];
@@ -100,7 +116,11 @@ function syncAudio(item, t) {
   if (!playing || playing.audio !== a) {
     if (playing) playing.audio.pause();
     playing = { id: item.id, audio: a };
-    if (a.readyState >= 1) a.currentTime = Math.max(0, t);
+    const rec = { id: item.id, at: now(), ready: a.readyState, primed: primed?.audio === a };
+    switchLog.push(rec); if (switchLog.length > 20) switchLog.shift();
+    a.addEventListener("playing", () => { rec.playingAt = now(); rec.stallMs = Math.round(rec.playingAt - rec.at); }, { once: true });
+    // 预加载好的那条已经停在正确位置：差得不多就不 seek（seek 本身要等几百毫秒），直接放，漂移交给后面的校正
+    if (a.readyState >= 1 && Math.abs(a.currentTime - t) > 0.25) a.currentTime = Math.max(0, t);
     a.play().catch(() => {});      // 开机那次点击里同步调用，保住手势
     seekWhenReady(a, item.audio);
     prefetchAround(vnow());
@@ -171,5 +191,5 @@ function frame() {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__aitv.player = { pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
+window.__aitv.player = { switchLog, get primed() { return primed && { url: primed.url, t: primed.t, ready: primed.audio.readyState }; }, pause, resume, goLive, get paused() { return paused; }, get lag() { return lag; }, get audio() { return playing?.audio; },
   drift() { const a = playing?.audio; if (!a) return null; const { t } = here(); return { cur: +a.currentTime.toFixed(2), target: +t.toFixed(2), ready: a.readyState, paused: a.paused }; } };

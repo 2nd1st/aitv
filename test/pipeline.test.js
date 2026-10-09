@@ -78,7 +78,7 @@ test("一轮跑完：抓 → 读原文 → brief → 稿 → 校验 → 合成 �
   assert.equal(calls.tts, 1);
   assert.equal((await kv.get(capKey(T0))).count, 1);
   assert.deepEqual(await kv.get("timeline"), TL); // 没上线
-  assert.ok(out.plan.switchAt >= T0 + 90_000 && out.plan.count === 16, JSON.stringify(out.plan));
+  assert.ok(out.plan.switchAt >= T0 + 150_000 && out.plan.count === 16, JSON.stringify(out.plan));
   // 每天最多开一条：第二轮不再抓新的
   const again = await runCron({ ...d, now: T0 + 15 * 60_000 }, {});
   assert.ok(!again.log.some((l) => l.startsWith("新条目")));
@@ -143,11 +143,11 @@ test("下架按稿子 hash：同一份稿子丢掉；同一个 id 写出新稿�
   assert.equal(st.status, "ready", st.why);
 });
 
-test("自动上线打开：插在当前在播那条后面，switchAt 在边界且 >= now+90s，现在播的不受影响", async () => {
+test("自动上线打开：插在当前在播那条后面，switchAt 在边界且 >= now+150s，现在播的不受影响", async () => {
   const x = deps();
   await runCron(x.d, { autoPublish: true });
   const tl = await x.kv.get("timeline");
-  assert.ok(tl.next && tl.switchAt >= T0 + 90_000);
+  assert.ok(tl.next && tl.switchAt >= T0 + 150_000);
   assert.equal(tl.current.anchor, TL.current.anchor);
   assert.equal(tl.next.items[0].id, ID);
   assert.equal(tl.next.items.length, 16);

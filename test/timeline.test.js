@@ -26,7 +26,9 @@ function client(openedAt, serverAt) {
 const api = (tl) => (ms) => { const e = effective(tl, ms); return { version: e.current.version, ...e, ...e.current }; };
 const serverWith = (changeAt, tlNew) => (ms) => api(ms < changeAt ? tl0 : tlNew)(ms);
 
-test("nextBoundary：现在 + 90 秒之后的第一个条目边界", () => {
+test("提前量是 150 秒", () => assert.equal(LEAD_MS, 150_000));
+
+test("nextBoundary：现在 + 150 秒之后的第一个条目边界", () => {
   const s = tl0.current;
   assert.equal(nextBoundary(s, T0 + 1), T0 + 30_000);
   assert.equal(nextBoundary(s, T0 + 30_000), T0 + 30_000);
@@ -81,11 +83,11 @@ test("switchAt 之前接口继续给旧时间线（带 next）；之后给新的
 });
 
 test("普通下架：switchAt 才生效，被删的跳过，之后接着原来的顺序；紧急 --now 立刻切", () => {
-  const now = T0 + 10_000; // 正在播 a；+90s = 100s → 边界 c 结束 (88s)? 不：a30 b55 c88 d116 → 第一个 >=100s 的是 116s（e）
+  const now = T0 + 10_000; // 正在播 a；+150s = 160s；边界 a0 b30 c55 d88 e116，一圈 147 → 第一个 >=160s 的是第二圈 b（177s）
   const items = base.filter((x) => x.id !== "e");
   const p = planTimeline(tl0, now, { items });
-  assert.equal(p.timeline.switchAt, T0 + 116_000);
-  assert.deepEqual(p.timeline.next.items.map((x) => x.id), ["a", "b", "c", "d"]); // e 被跳过，从 a 接着
+  assert.equal(p.timeline.switchAt, T0 + 177_000);
+  assert.deepEqual(p.timeline.next.items.map((x) => x.id), ["b", "c", "d", "a"]); // e 被跳过，从 b 接着
   const em = planTimeline(tl0, now, { items: base.filter((x) => x.id !== "a"), emergency: true });
   assert.equal(em.timeline.next, null);
   assert.equal(em.timeline.current.anchor, now);
@@ -95,9 +97,11 @@ test("普通下架：switchAt 才生效，被删的跳过，之后接着原来�
 
 test("还有一个快到点的切换没生效：拒绝再排（等它过了再来）；离得远就替换掉 next、沿用同一个 switchAt", () => {
   const p = planTimeline(tl0, T0, { items: base, insert: [mk("n1", 20)] });
-  const soon = planTimeline(p.timeline, p.timeline.switchAt - 30_000, { items: base });
+  const soon = planTimeline(p.timeline, p.timeline.switchAt - (LEAD_MS - 1_000), { items: base }); // 离生效不足 150 秒 → 拒
   assert.equal(soon.ok, false);
-  const far = planTimeline(p.timeline, p.timeline.switchAt - 100_000, { items: base, insert: [mk("n2", 20)] });
+  assert.match(soon.reason, /150 秒/);
+  assert.equal(soon.ok, false);
+  const far = planTimeline(p.timeline, p.timeline.switchAt - LEAD_MS - 10_000, { items: base, insert: [mk("n2", 20)] });
   assert.ok(far.ok);
   assert.equal(far.timeline.switchAt, p.timeline.switchAt);
   assert.equal(far.timeline.current, tl0.current);
