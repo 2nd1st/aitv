@@ -6,11 +6,14 @@
 - `src/worker.js`：`/api/time` 校时（毫秒）、`/api/schedule` 节目单；定时任务每 15 分钟出一份新节目单，失败保留上一份。
 - `src/schedule.js`：节目单连续排、无空档，缺音频的条目跳过，播完循环。
 - `src/validate.js`：数字硬校验。稿子只能用 `{{字段}}` 引用源数据，渲染后出现源数据里没有的数字，整条丢掉。
-- `src/sources.js`：抓榜（包打听）。HN、GitHub Trending、Product Hunt、AIHOT 四个源，出统一 item（`id`、`source`、`url`、`fetchedAt`、`publishedAt`、`template`、`focus`、`fields`），数字原样放在 `fields`。一个源挂了只记进 `errors`，其他源照常出；`dedupe` 按 id 跨轮去重，`interleave` 让四个源轮流排。本地试抓：`node scripts/fetch-sources.mjs`。
+- `src/sources.js`：抓榜（包打听）。HN、GitHub Trending、Product Hunt、AIHOT 四个源，出统一 item（`id`、`source`、`url`、`fetchedAt`、`publishedAt`、`template`、`focus`、`fields`），数字原样放在 `fields`。一个源挂了只记进 `errors`，其他源照常出；`dedupe` 按 id 跨轮去重，`interleave` 让四个源轮流排。本地试抓：`node scripts/fetch-sources.mjs`；冒烟（PH 日榜 + AIHOT，读原文、看发布时间和配图取舍，图存内存假桶）：`node scripts/smoke-sources.mjs`。
+  - Product Hunt 用太平洋时间「昨天」已经结束的日榜页（`/leaderboard/daily/Y/M/D`，解析内嵌的 Apollo 数据）：`phDailyRank`（真实 Post 的顺序，广告不占名次，有官方 TopPostBadge 以它为准）、`phScore`（launchDayScore，PH 综合分，不是票数）、`comments`，取前十；每批过合理性检查（名次从 1 连续、跳过广告、分数随名次不增、页面日期对），不过就整批去掉名次和分数，条目照留。
+  - AIHOT 的 `latestAt` 是最后活跃时间，不当发布时间：补料时从原文读（meta / JSON-LD / `<time>` / 正文日期 / X 帖子 id），读不到 `publishedAt: null` + `dateUnknown: true`；原文比 latestAt 早三天以上算旧链接，url 退回 `links.aihot`。
+  - 配图（`src/imagepick.js`）：原文 og:image / twitter:image 先按地址筛（logo / 图标字样、聚合站分享卡、跟首页默认图一样、别家域名且不是常见 CDN 都不要），再只经 `storeImage` 下载、按真实字节筛（太小、正方形小图、画面太素的字标卡），节目单里只有 `/img/<key>`；图不给写稿模型。
 - `src/enrich.js`：补料（包打听）。每条去读原文页、README 或产品页，交给写稿模型提炼 `what`（是什么）、`who`（给谁用）、`highlight`（亮点）。这三个字段里不许有任何数字（常用词白名单除外），不合格 `brief` 为 null。模型通过 `enrich(item, { llm })` 注入。本地看命中率：`node scripts/try-enrich.mjs`。
 - `src/digits.js`：数字规则唯一出处（白名单：一个、一款、一种、一句话、一下、一起、一些、一直、一样、唯一、统一、万一、十分；先去白名单再查阿拉伯数字/中文数字）。`enrich.js` 和 `validate.js` 共用。
 - `src/writer.js`：写稿 v3。DeepSeek 只看 brief（kind / name / what / who / highlight）+ 标题 + 带单位的数字字段，写三段：这是什么 / 跟你有什么关系 / AI 点评。`kind` 由补料定（product / project / commentary / news），写稿只读不改：只有 product / project 的点评可以是「今天就可以试」；commentary / news 讲清主张或报道和立场，点评是判断或接下来该看什么。part1 必须点名，带数字的名字只能经 `{{name}}`（补料从标题原样摘出、已核实）进稿。语气中性专业，`src/tone.js` 拦「抄」「破解」「绕过」这类说法；禁「值得关注」「值得一看」等空话；相邻两条点评开头不能一样。输出模板，`validate.js` 校验，不过重写一次，再不过丢掉。原文不进 seed、不进节目单（只留 brief + url）。
-- `src/validate.js` 的 `UNITS`：每个能进稿的数字字段都注明它在源接口里是什么数；含义没核实的不留（HN / Product Hunt 不给 rank，AIHOT 的 sourceCount / signalCount 没文档，不用）。
+- `src/validate.js` 的 `UNITS`：每个能进稿的数字字段都注明它在源接口里是什么数；含义没核实的不留（HN / Product Hunt 不给 rank，PH 的日榜名次单独叫 phDailyRank、只能念「昨天 Product Hunt 日榜第 N 名」，AIHOT 的 sourceCount / signalCount 没文档，不用）。
 - 生成节目（新版本，不影响线上）：`node scripts/build-items.mjs 20 > /tmp/items.json && /workspace/podcast/.venv/bin/python scripts/tts_seed.py /tmp/items.json [版本号]` → `public/seeds/<版本号>/seed.json` + `audio/`（需要 `DEEPSEEK_API_KEY`、`DOUBAO_TTS_ACCESS_TOKEN`；写稿模型默认 `deepseek-v4-pro`，补料默认 `deepseek-chat`，可用 `AITV_SCRIPT_MODEL` / `AITV_BRIEF_MODEL` 改）。版本号是东八区时间，如 `20261009-1130`。
 
 ### 部署（唯一入口）

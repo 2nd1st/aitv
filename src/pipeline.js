@@ -14,7 +14,7 @@ import { checkSafety } from "./safety.js";
 import { scriptHash, SPEAKERS, AUDIO_CONFIG } from "./scripthash.js";
 import { takedownMatches, checkSeed, MIN_PLAYABLE } from "./release.js";
 import { reserveTTS } from "./ttscap.js";
-import { storeImage } from "./images.js";
+import { storeScreenedImage } from "./imagepick.js";
 import { mp3Duration } from "./mp3.js";
 import { planTimeline, effective, fresh, locate } from "./timeline.js";
 
@@ -31,11 +31,13 @@ const step = {
   async read(st, d) {
     const m = await fetchMaterial(st.item, { fetchImpl: d.fetch });
     if (!m) throw new Error("原文读不到");
+    // 发布时间读不到（AIHOT 原文没日期、或原文是旧链接退回了 links.aihot）：不播，不拿抓取时间顶替
+    if (m.patch?.dateUnknown || (st.item.dateUnknown && m.patch?.publishedAt == null)) throw new Drop("发布时间读不到，不播");
     return m; // { url, text, image }（原文只存在流水线自己的 KV 里，不进 seed / 节目单）
   },
   async brief(st, d) {
     const e = await enrich(st.item, { llm: (p) => d.briefLLM(p, { temperature: 0.3 }), retries: 1, material: st.results.read });
-    if (e.brief) return { kind: e.kind, brief: e.brief, fields: e.fields, image: e.image ?? null };
+    if (e.brief) return { kind: e.kind, brief: e.brief, fields: e.fields, image: e.image ?? null, imageHint: e.imageHint ?? null };
     if (e.unsafe || !/模型出错/.test(e.briefError || "")) throw new Drop(e.briefError || "brief 不合格");
     throw new Error(e.briefError);
   },
@@ -50,7 +52,7 @@ const step = {
   async validate(st, d) {
     const b = st.results.brief, s = st.results.script;
     const it = { ...st.item, ...b, fields: s.fields };
-    const chk = checkScript(s.parts, scriptFields(it), { kind: b.kind });
+    const chk = checkScript(s.parts, scriptFields(it), { kind: b.kind, source: it.source });
     if (!chk.ok) throw new Drop(`复核不过：${chk.errors.join("；")}`);
     const safe = checkSafety(it, b.brief);
     if (!safe.ok) throw new Drop(`内容安全：${safe.reasons.join("；")}`);
@@ -80,8 +82,11 @@ const step = {
     }
     const dur = mp3Duration(bytes);
     if (!(dur > 0)) throw new Error("音频时长为 0");
-    const image = st.results.brief.image ? await storeImage(d.r2img || d.r2, st.results.brief.image, st.item.url, { fetch: d.fetch }) : null;
-    return { audio: `/audio/${mp3Key}`, duration: Math.round((dur + 0.6) * 1000) / 1000, rounds: tagParts(rounds, lines), image, cached, bytes: bytes.length };
+    // 配图：补料时已按地址筛过，这里经 storeImage 下载并按真实字节再筛一次（尺寸、画面太素），不合格就没图
+    const img = st.results.brief.image
+      ? await storeScreenedImage(d.r2img || d.r2, st.results.brief.image, itemOf(st).url, { fetch: d.fetch, hint: st.results.brief.imageHint || {} })
+      : { image: null, reason: "" };
+    return { audio: `/audio/${mp3Key}`, duration: Math.round((dur + 0.6) * 1000) / 1000, rounds: tagParts(rounds, lines), image: img.image, imageNote: img.reason, cached, bytes: bytes.length };
   },
 };
 
@@ -100,9 +105,11 @@ export function tagParts(rounds, lines) {
 }
 
 // 全部步骤跑完 → 节目单条目（字段白名单）；再用发布时同一套 checkSeed 单条校验
+// 读原文那步可能改了 item（AIHOT：原文发布时间、旧链接退回 links.aihot）
+const itemOf = (st) => ({ ...st.item, ...(st.results?.read?.patch || {}) });
 export function seedItemOf(st) {
   const b = st.results.brief, s = st.results.script, t = st.results.tts;
-  const it = toSeedItem({ ...st.item, kind: s.kind, brief: b.brief, fields: s.fields, image: t.image, take: s.lines[2],
+  const it = toSeedItem({ ...itemOf(st), kind: s.kind, brief: b.brief, fields: s.fields, image: t.image, take: s.lines[2],
     script: s.parts.map((tpl, i) => ({ part: PART_KEYS[i], tpl, text: s.lines[i] })), lines: s.lines });
   delete it.lines; // 跟 scripts/tts_seed.py 出的 seed 一样，不带 lines
   return { ...it, audio: t.audio, duration: t.duration, spoken: s.lines.join(""), rounds: t.rounds };
