@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --local --port 8787",
+    "dev": "npm run build && wrangler dev --local --port 8787",
     "seed": "node scripts/seed-local.mjs",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build": "rm -rf public/screen && cp -r screen public/screen"
   },
   "devDependencies": {}
 }

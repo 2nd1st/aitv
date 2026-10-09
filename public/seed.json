@@ -1,0 +1,314 @@
+{
+ "anchorMs": 1760000000000,
+ "items": [
+  {
+   "id": "hn-50006832",
+   "source": "Hacker News",
+   "url": "https://apnews.com/article/h1b-visa-program-vance-microsoft-e7b3a407f822702b269ee277d21343ea",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791472500000,
+   "template": "number",
+   "focus": "points",
+   "fields": {
+    "title": "Trump administration is suspending Microsoft from a green card program",
+    "rank": 1,
+    "points": 809,
+    "comments": 1389
+   },
+   "audio": "/audio/hn-50006832.mp3",
+   "duration": 9.724,
+   "spoken": "Hacker News 热榜第 1 名：Trump administration is suspending Microsoft from a green card program。目前 809 分，1389 条评论。",
+   "rounds": [
+    {
+     "text": "Hacker News 热榜第 1 名：Trump administration is suspending Microsoft from a green card program。",
+     "start_time": 0,
+     "end_time": 5.266
+    },
+    {
+     "text": "目前 809 分，1389 条评论。",
+     "start_time": 5.266,
+     "end_time": 8.988
+    }
+   ]
+  },
+  {
+   "id": "gh-boykopovar/AnyPS5",
+   "source": "GitHub Trending",
+   "url": "https://github.com/boykopovar/AnyPS5",
+   "fetchedAt": 1791505364969,
+   "publishedAt": null,
+   "template": "number",
+   "focus": "starsToday",
+   "fields": {
+    "title": "boykopovar / AnyPS5",
+    "description": "Tool for automatic PS5 executables porting to Linux and Windows",
+    "language": "C++",
+    "rank": 1,
+    "stars": 15681,
+    "forks": 1236,
+    "starsToday": 4669
+   },
+   "audio": "/audio/gh-boykopovar-AnyPS5.mp3",
+   "duration": 9.532,
+   "spoken": "GitHub 今日趋势第 1 名：boykopovar / AnyPS5。今天新增 4669 颗星，累计 15681 颗星。",
+   "rounds": [
+    {
+     "text": "GitHub 今日趋势第 1 名：boykopovar / AnyPS5。",
+     "start_time": 0,
+     "end_time": 3.517
+    },
+    {
+     "text": "今天新增 4669 颗星，累计 15681 颗星。",
+     "start_time": 3.517,
+     "end_time": 8.807
+    }
+   ]
+  },
+  {
+   "id": "ph-1272416",
+   "source": "Product Hunt",
+   "url": "https://www.producthunt.com/products/typeling",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791359458000,
+   "template": "title",
+   "fields": {
+    "title": "Typeling",
+    "tagline": "Translate in your iPhone keyboard. Keep your tone.",
+    "rank": 1
+   },
+   "audio": "/audio/ph-1272416.mp3",
+   "duration": 5.524,
+   "spoken": "Product Hunt 今日上新：Typeling。Translate in your iPhone keyboard. Keep your tone.",
+   "rounds": [
+    {
+     "text": "Product Hunt 今日上新：Typeling。",
+     "start_time": 0,
+     "end_time": 2.326
+    },
+    {
+     "text": "Translate in your iPhone keyboard. Keep your tone.",
+     "start_time": 2.326,
+     "end_time": 4.818
+    }
+   ]
+  },
+  {
+   "id": "aihot-x8r8kta42au39pp06f02shk9f",
+   "source": "AIHOT",
+   "url": "https://www.anthropic.com/claude-sonnet-5-5",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791489850000,
+   "template": "number",
+   "focus": "sourceCount",
+   "fields": {
+    "title": "Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价",
+    "origin": "Anthropic：Newsroom（网页）",
+    "rank": 1,
+    "sourceCount": 13,
+    "discussions": 66,
+    "permalink": "https://aihot.news/items/x8r8kta42au39pp06f02shk9f"
+   },
+   "audio": "/audio/aihot-x8r8kta42au39pp06f02shk9f.mp3",
+   "duration": 10.564,
+   "spoken": "AI 热点第 1 名：Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价。被 13 个来源报道，66 条讨论。",
+   "rounds": [
+    {
+     "text": "AI 热点第 1 名：Anthropic 发布 Sonnet 5.5 与 Haiku 5.5，下调缓存读取价。",
+     "start_time": 0,
+     "end_time": 6.608
+    },
+    {
+     "text": "被 13 个来源报道，66 条讨论。",
+     "start_time": 6.608,
+     "end_time": 9.838
+    }
+   ]
+  },
+  {
+   "id": "hn-50008427",
+   "source": "Hacker News",
+   "url": "https://cactuscompute.com/blog/whistle",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791478779000,
+   "template": "number",
+   "focus": "points",
+   "fields": {
+    "title": "Whistle: Speech to Text in 16.9 MB",
+    "rank": 2,
+    "points": 484,
+    "comments": 112
+   },
+   "audio": "/audio/hn-50008427.mp3",
+   "duration": 7.756,
+   "spoken": "Hacker News 热榜第 2 名：Whistle: Speech to Text in 16.9 MB。目前 484 分，112 条评论。",
+   "rounds": [
+    {
+     "text": "Hacker News 热榜第 2 名：Whistle: Speech to Text in 16.9 MB。",
+     "start_time": 0,
+     "end_time": 4.2
+    },
+    {
+     "text": "目前 484 分，112 条评论。",
+     "start_time": 4.2,
+     "end_time": 7.031
+    }
+   ]
+  },
+  {
+   "id": "gh-cathrynlavery/diagram-design",
+   "source": "GitHub Trending",
+   "url": "https://github.com/cathrynlavery/diagram-design",
+   "fetchedAt": 1791505364969,
+   "publishedAt": null,
+   "template": "number",
+   "focus": "starsToday",
+   "fields": {
+    "title": "cathrynlavery / diagram-design",
+    "description": "Editorial diagram design for Claude Code, Codex, GitHub Copilot, Factory Droid, and Pi. 42 diagram types. Self-contained HTML + SVG. No shadows. No Mermaid slop.",
+    "language": "HTML",
+    "rank": 2,
+    "stars": 46315,
+    "forks": 2947,
+    "starsToday": 1160
+   },
+   "audio": "/audio/gh-cathrynlavery-diagram-design.mp3",
+   "duration": 8.74,
+   "spoken": "GitHub 今日趋势第 2 名：cathrynlavery / diagram-design。今天新增 1160 颗星，累计 46315 颗星。",
+   "rounds": [
+    {
+     "text": "GitHub 今日趋势第 2 名：cathrynlavery / diagram-design。",
+     "start_time": 0,
+     "end_time": 3.253
+    },
+    {
+     "text": "今天新增 1160 颗星，累计 46315 颗星。",
+     "start_time": 3.253,
+     "end_time": 8.008
+    }
+   ]
+  },
+  {
+   "id": "ph-1273018",
+   "source": "Product Hunt",
+   "url": "https://www.producthunt.com/products/aegis-14",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791398030000,
+   "template": "title",
+   "fields": {
+    "title": "aegis",
+    "tagline": "Smart personal safety app connected to 24/7 dispatch",
+    "rank": 2
+   },
+   "audio": "/audio/ph-1273018.mp3",
+   "duration": 6.1,
+   "spoken": "Product Hunt 今日上新：aegis。Smart personal safety app connected to 24/7 dispatch",
+   "rounds": [
+    {
+     "text": "Product Hunt 今日上新：aegis。",
+     "start_time": 0,
+     "end_time": 1.824
+    },
+    {
+     "text": "Smart personal safety app connected to 24/7 dispatch",
+     "start_time": 1.824,
+     "end_time": 5.363
+    }
+   ]
+  },
+  {
+   "id": "aihot-uir31g728myjry383z17txvrw",
+   "source": "AIHOT",
+   "url": "https://openai.com/index/gpt-6-for-everyone/",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791426163000,
+   "template": "number",
+   "focus": "sourceCount",
+   "fields": {
+    "title": "OpenAI向ChatGPT全量用户开放GPT-6与Intelligent UI",
+    "origin": "OpenAI：官网动态（RSS · 排除企业/客户案例）",
+    "rank": 2,
+    "sourceCount": 10,
+    "discussions": 35,
+    "permalink": "https://aihot.news/items/uir31g728myjry383z17txvrw"
+   },
+   "audio": "/audio/aihot-uir31g728myjry383z17txvrw.mp3",
+   "duration": 8.812,
+   "spoken": "AI 热点第 2 名：OpenAI向ChatGPT全量用户开放GPT-6与Intelligent UI。被 10 个来源报道，35 条讨论。",
+   "rounds": [
+    {
+     "text": "AI 热点第 2 名：OpenAI向ChatGPT全量用户开放GPT-6与Intelligent UI。",
+     "start_time": 0,
+     "end_time": 5.785
+    },
+    {
+     "text": "被 10 个来源报道，35 条讨论。",
+     "start_time": 5.785,
+     "end_time": 8.072
+    }
+   ]
+  },
+  {
+   "id": "hn-50000488",
+   "source": "Hacker News",
+   "url": "https://www.dgt.is/blog/2026-10-07-deepseek-freek-out/",
+   "fetchedAt": 1791505364969,
+   "publishedAt": 1791418488000,
+   "template": "number",
+   "focus": "points",
+   "fields": {
+    "title": "Why isn't the industry freaking out about DeepSeek 4.1 Flash?",
+    "rank": 3,
+    "points": 352,
+    "comments": 305
+   },
+   "audio": "/audio/hn-50000488.mp3",
+   "duration": 8.692,
+   "spoken": "Hacker News 热榜第 3 名：Why isn't the industry freaking out about DeepSeek 4.1 Flash?。目前 352 分，305 条评论。",
+   "rounds": [
+    {
+     "text": "Hacker News 热榜第 3 名：Why isn't the industry freaking out about DeepSeek 4.1 Flash?。",
+     "start_time": 0,
+     "end_time": 5.767
+    },
+    {
+     "text": "目前 352 分，305 条评论。",
+     "start_time": 5.767,
+     "end_time": 7.971
+    }
+   ]
+  },
+  {
+   "id": "gh-morluto/rea",
+   "source": "GitHub Trending",
+   "url": "https://github.com/morluto/rea",
+   "fetchedAt": 1791505364969,
+   "publishedAt": null,
+   "template": "number",
+   "focus": "starsToday",
+   "fields": {
+    "title": "morluto / rea",
+    "description": "Reverse engineer anything with agents, from app behavior down to native binaries.",
+    "language": "TypeScript",
+    "rank": 3,
+    "stars": 26099,
+    "forks": 2937,
+    "starsToday": 7738
+   },
+   "audio": "/audio/gh-morluto-rea.mp3",
+   "duration": 7.972,
+   "spoken": "GitHub 今日趋势第 3 名：morluto / rea。今天新增 7738 颗星，累计 26099 颗星。",
+   "rounds": [
+    {
+     "text": "GitHub 今日趋势第 3 名：morluto / rea。",
+     "start_time": 0,
+     "end_time": 2.743
+    },
+    {
+     "text": "今天新增 7738 颗星，累计 26099 颗星。",
+     "start_time": 2.743,
+     "end_time": 7.253
+    }
+   ]
+  }
+ ]
+}

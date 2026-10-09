@@ -52,7 +52,7 @@ test("AIHOT：中文标题和信源数", () => {
 
 test("抓到的数字能过硬校验，编出来的数字被拦", () => {
   const [it] = parseGitHubTrending(fx("gh-trending.html"), T);
-  assert.ok(buildSpoken("{{title}} 今天涨了 {{starsToday}} 颗星，总共 {{stars}}。", it.fields));
+  assert.ok(buildSpoken("{{title}} 今天涨了 {{starsToday}} 颗星，总共 {{stars}} 颗星。", it.fields));
   assert.equal(buildSpoken(`{{title}} 今天涨了 ${it.fields.starsToday + 1} 颗星。`, it.fields), null);
 });
 
